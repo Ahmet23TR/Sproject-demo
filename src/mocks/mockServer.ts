@@ -15,14 +15,39 @@ import type {
     PriceListDetail,
     PriceListSummary,
     Product,
-    ProductPayload,
-    ProductionItem,
     TopCustomerData,
     User,
 } from "@/types/data";
 import { createDemoState, createOrder } from "./data";
 import type { DemoState, DemoUser, DemoCartItemPayload } from "./types";
 import { createMockToken, decodeMockToken } from "./token";
+
+// ProductPayload type for creating/updating products
+interface ProductPayload {
+    name: string;
+    description?: string;
+    imageUrl?: string;
+    isActive?: boolean;
+    unit?: 'PIECE' | 'KG' | 'TRAY';
+    categoryId?: string;
+    productGroup?: 'SWEETS' | 'BAKERY';
+}
+
+// ProductionItem type for production tracking
+interface ProductionItem {
+    productId: string;
+    productName: string;
+    categoryName: string | null;
+    quantity: number;
+    unit: 'PIECE' | 'KG' | 'TRAY';
+    orderId: string;
+    status: string;
+    client: string;
+    scheduledDate: string;
+    variantName?: string;
+    productGroup?: 'SWEETS' | 'BAKERY';
+    total?: number;
+}
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -292,7 +317,14 @@ class MockServer {
                     const remaining = Math.max(0, item.quantity - produced);
                     if (remaining <= 0) return;
                     production.push({
+                        productId: item.product.id,
                         productName: item.product.name,
+                        categoryName: null,
+                        quantity: remaining,
+                        orderId: order.id,
+                        status: 'PENDING',
+                        client: order.user?.companyName ?? '',
+                        scheduledDate: order.createdAt,
                         variantName:
                             item.selectedOptions?.map(
                                 (opt) => opt.optionItem.name
@@ -352,16 +384,19 @@ class MockServer {
                 last7DaysRevenue: chartSeries(7),
                 last30DaysRevenue: chartSeries(30),
                 last3MonthsRevenue: chartSeries(90),
-                productionByGroupToday: ["SWEETS", "BAKERY"].map((group) => ({
-                    group,
+                productionByGroupToday: (["SWEETS", "BAKERY"] as const).map((group) => ({
+                    group: group as 'SWEETS' | 'BAKERY',
                     total: this.getProductionList(todayKey)
                         .filter((item) => item.productGroup === group)
-                        .reduce((sum, item) => sum + item.total, 0),
+                        .reduce((sum, item) => sum + (item.total ?? 0), 0),
                     amount: productGroupBreakdown.find(
                         (item) => item.group === group
                     )?.amount,
                 })),
-                revenueByGroupToday: productGroupBreakdown,
+                revenueByGroupToday: productGroupBreakdown.map(item => ({
+                    ...item,
+                    group: item.group as 'SWEETS' | 'BAKERY'
+                })),
                 orderStatusDistribution: this.state.orders.reduce(
                     (acc, order) => {
                         acc[order.deliveryStatus] =
@@ -640,6 +675,14 @@ class MockServer {
             const orderCount = clientOrders.length;
             const averageOrderValue =
                 orderCount > 0 ? totalSpending / orderCount : 0;
+            
+            const orderDates = clientOrders
+                .map(o => new Date(o.createdAt))
+                .sort((a, b) => a.getTime() - b.getTime());
+            const firstOrderDate = orderDates[0]?.toISOString() ?? new Date().toISOString();
+            const lastOrderDate = orderDates[orderDates.length - 1]?.toISOString() ?? new Date().toISOString();
+            const customerSince = orderDates[0]?.getTime() ?? Date.now();
+            
             return {
                 userId: client.id,
                 customerName:
@@ -651,6 +694,9 @@ class MockServer {
                 orderCount,
                 totalSpending: Number(totalSpending.toFixed(2)),
                 averageOrderValue: Number(averageOrderValue.toFixed(2)),
+                firstOrderDate,
+                lastOrderDate,
+                customerSince,
             };
         });
         let filtered = rows;
@@ -727,7 +773,7 @@ class MockServer {
             return {
                 productId: product.id,
                 productName: product.name,
-                group: product.productGroup,
+                group: (product.productGroup ?? 'SWEETS') as 'SWEETS' | 'BAKERY',
                 ordered,
                 produced,
                 cancelled,
@@ -805,7 +851,7 @@ class MockServer {
                                 order.user?.surname ?? ""
                             }`.trim(),
                         address: order.user?.address || "Dubai, UAE",
-                        phone: order.user?.phone ?? undefined,
+                        phone: undefined,
                     };
                 }
                 acc[id].total += order.finalTotalAmount || 0;

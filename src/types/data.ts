@@ -182,14 +182,17 @@ export interface DashboardStats {
 
 // Ürün fiyatlandırma sistemi için katalog tipleri
 export type OptionItem = {
+    id: string;
     name: string;
     priceAdjustment?: number;
+    price?: number;
     multiplier?: number;
     weightInGrams?: number;
     unit?: string;
 };
 
 export type OptionGroup = {
+    id: string;
     name: string;
     isRequired: boolean;
     allowMultiple?: boolean;
@@ -197,10 +200,17 @@ export type OptionGroup = {
 };
 
 export type Product = {
+    id: string;
     name: string;
+    description?: string | null;
+    imageUrl?: string | null;
+    isActive?: boolean;
     basePrice: number;
-    unit?: string;
-    optionGroups: OptionGroup[];
+    unit?: "PIECE" | "KG" | "TRAY";
+    productGroup?: "SWEETS" | "BAKERY";
+    categoryId?: string | null;
+    category?: { id: string; name: string } | null;
+    optionGroups?: OptionGroup[];
 };
 
 export type Category = {

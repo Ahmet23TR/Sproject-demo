@@ -5,7 +5,7 @@ import type {
     Product,
 } from "@/types/data";
 import { DEMO_DATA_VERSION } from "@/config/demo";
-import type { DemoState, DemoUser } from "./types";
+import type { DemoState, DemoUser, DemoPriceListDetail } from "./types";
 
 const now = new Date();
 const todayIso = now.toISOString();
@@ -447,9 +447,15 @@ const priceListItems = (listId: string): PriceListItem[] => {
 
     return entries.map((entry, index) => {
         const option = products
-            .flatMap((product) => product.optionGroups)
+            .flatMap((product) => product.optionGroups ?? [])
             .flatMap((group) => group.items.map((item) => ({ group, item })))
             .find(({ item }) => item.id === entry.optionItemId);
+        
+        const productForOption = products.find((p) =>
+            (p.optionGroups ?? [])
+                .map((g) => g.id)
+                .includes(option?.group.id ?? '')
+        );
 
         return {
             id: `${listId}-price-${index}`,
@@ -460,7 +466,7 @@ const priceListItems = (listId: string): PriceListItem[] => {
                 typeof option?.item.multiplier === "string"
                     ? Number(option!.item.multiplier)
                     : option?.item.multiplier ?? null,
-            optionItem: option
+            optionItem: option && productForOption
                 ? {
                       id: option.item.id,
                       name: option.item.name,
@@ -468,17 +474,8 @@ const priceListItems = (listId: string): PriceListItem[] => {
                           id: option.group.id,
                           name: option.group.name,
                           product: {
-                              id: products.find((p) =>
-                                  p.optionGroups
-                                      .map((g) => g.id)
-                                      .includes(option.group.id)
-                              )?.id,
-                              name:
-                                  products.find((p) =>
-                                      p.optionGroups
-                                          .map((g) => g.id)
-                                          .includes(option.group.id)
-                                  )?.name ?? "",
+                              id: productForOption.id,
+                              name: productForOption.name,
                           },
                       },
                   }
@@ -487,12 +484,12 @@ const priceListItems = (listId: string): PriceListItem[] => {
     });
 };
 
-const priceLists = [
+const priceLists: DemoPriceListDetail[] = [
     {
         id: "pl-retail-standard",
         name: "Standard Retail",
         isDefault: true,
-        type: "RETAIL",
+        type: "RETAIL" as const,
         distributorId: null,
         createdAt: isoDaysAgo(20),
         updatedAt: todayIso,
@@ -502,7 +499,7 @@ const priceLists = [
         id: "pl-wholesale-gulf",
         name: "Gulf Wholesale",
         isDefault: false,
-        type: "WHOLESALE",
+        type: "WHOLESALE" as const,
         distributorId: "user-distributor-nadia",
         createdAt: isoDaysAgo(35),
         updatedAt: isoDaysAgo(1),
@@ -555,7 +552,7 @@ export const createOrder = (
                 id: optionId,
                 name:
                     products
-                        .flatMap((p) => p.optionGroups)
+                        .flatMap((p) => p.optionGroups ?? [])
                         .flatMap((g) => g.items)
                         .find((opt) => opt.id === optionId)?.name ?? optionId,
             },
@@ -576,7 +573,7 @@ export const createOrder = (
                     ? "FAILED"
                     : payload.status === "PARTIALLY_DELIVERED"
                     ? "PARTIAL"
-                    : "PENDING",
+                    : undefined,
             deliveryNotes: payload.deliveryNotes ?? null,
             unitPrice: item.unitPrice,
             totalPrice: item.totalPrice,
@@ -586,8 +583,8 @@ export const createOrder = (
                 ? {
                       id: product.id,
                       name: product.name,
-                      unit: product.unit,
-                      productGroup: product.productGroup,
+                      unit: product.unit ?? 'PIECE',
+                      productGroup: product.productGroup ?? 'SWEETS',
                   }
                 : null,
             selectedOptions,
@@ -749,7 +746,6 @@ orders.push(
                 deliveredQuantity: 6,
                 unitPrice: 396,
                 totalPrice: 3168,
-                productionNotes: "2 trays held for QC",
             },
         ],
         deliveryNotes: "Partial handover, client accepted with note.",
@@ -775,7 +771,6 @@ orders.push(
                 deliveredQuantity: 0,
                 unitPrice: 34,
                 totalPrice: 1020,
-                productionNotes: "Driver reported refrigeration issue",
             },
         ],
         deliveryNotes: "Client postponed due to store issue.",

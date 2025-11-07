@@ -577,18 +577,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
                         const products = await fetchProductsByIds([
                             item.productId,
                         ]);
+                        const foundProduct = products.find((p) => p.id === item.productId);
                         setCart((prev) =>
                             prev.map((cartItem) =>
                                 cartItem.productId === item.productId
                                     ? {
                                           ...cartItem,
-                                          product:
-                                              cartItem.product ||
-                                              products.find(
-                                                  (p) =>
-                                                      p.id === item.productId
-                                              ) ||
-                                              null,
+                                          product: cartItem.product || (foundProduct ? {
+                                              id: foundProduct.id,
+                                              name: foundProduct.name,
+                                              description: foundProduct.description,
+                                              imageUrl: foundProduct.imageUrl,
+                                              isActive: foundProduct.isActive,
+                                              unit: foundProduct.unit,
+                                              productGroup: foundProduct.productGroup,
+                                              optionGroups: foundProduct.optionGroups?.map(og => ({
+                                                  id: og.id,
+                                                  name: og.name,
+                                                  isRequired: og.isRequired,
+                                                  allowMultiple: og.allowMultiple,
+                                                  items: og.items.map(item => ({
+                                                      id: item.id,
+                                                      name: item.name,
+                                                      price: item.price ?? 0,
+                                                      multiplier: item.multiplier ?? 1,
+                                                  }))
+                                              }))
+                                          } : undefined),
                                       }
                                     : cartItem
                             )
