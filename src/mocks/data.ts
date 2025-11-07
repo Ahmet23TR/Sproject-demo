@@ -315,6 +315,66 @@ const users: DemoUser[] = [
         priceListId: "pl-retail-standard",
     },
     {
+        id: "user-client-samira",
+        email: "samira@desertgrazing.demo",
+        password: "demo123",
+        name: "Samira",
+        surname: "Qadir",
+        role: "CLIENT",
+        isActive: true,
+        companyName: "Desert Grazing Co.",
+        address: "Alserkal Avenue, Dubai",
+        assignedDistributorId: "user-distributor-nadia",
+        priceListId: "pl-wholesale-gulf",
+        phone: "+971500000512",
+        createdAt: isoDaysAgo(28),
+    },
+    {
+        id: "user-client-yara",
+        email: "yara@eventcollective.demo",
+        password: "demo123",
+        name: "Yara",
+        surname: "Karam",
+        role: "CLIENT",
+        isActive: true,
+        companyName: "Event Collective",
+        address: "Dubai Marina Mall",
+        assignedDistributorId: "user-distributor-nadia",
+        priceListId: "pl-retail-standard",
+        phone: "+971500000642",
+        createdAt: isoDaysAgo(12),
+    },
+    {
+        id: "user-client-ibrahim",
+        email: "ibrahim@gulfcaterers.demo",
+        password: "demo123",
+        name: "Ibrahim",
+        surname: "Latif",
+        role: "CLIENT",
+        isActive: true,
+        companyName: "Gulf Caterers",
+        address: "Sharjah Corniche",
+        assignedDistributorId: "user-distributor-nadia",
+        priceListId: "pl-wholesale-gulf",
+        phone: "+971500000734",
+        createdAt: isoDaysAgo(45),
+    },
+    {
+        id: "user-client-mira",
+        email: "mira@midnighteats.demo",
+        password: "demo123",
+        name: "Mira",
+        surname: "Saadeh",
+        role: "CLIENT",
+        isActive: false,
+        companyName: "Midnight Eats Catering",
+        address: "Downtown Dubai",
+        assignedDistributorId: "user-distributor-nadia",
+        priceListId: "pl-retail-standard",
+        phone: "+971500000812",
+        createdAt: isoDaysAgo(80),
+    },
+    {
         id: "user-chef-selim",
         email: "chef.selim@sproject.demo",
         password: "demo123",
@@ -722,9 +782,129 @@ orders.push(
     })
 );
 
+orders.push(
+    createOrder("ord-1006", {
+        number: 1006,
+        clientId: "user-client-samira",
+        createdAt: isoDaysAgo(2),
+        status: "READY_FOR_DELIVERY",
+        productionStatus: "PARTIALLY_COMPLETED",
+        items: [
+            {
+                id: "ord-1006-item-1",
+                productId: "prod-mini-quiche",
+                quantity: 6,
+                selectionIds: ["opt-quiche-24"],
+                productionStatus: "COMPLETED",
+                producedQuantity: 6,
+                unitPrice: 396,
+                totalPrice: 2376,
+            },
+            {
+                id: "ord-1006-item-2",
+                productId: "prod-babka",
+                quantity: 12,
+                selectionIds: ["opt-babka-praline"],
+                productionStatus: "PENDING",
+                producedQuantity: 0,
+                unitPrice: 63,
+                totalPrice: 756,
+            },
+        ],
+        notes: "VIP brunch sampler boxes.",
+    })
+);
+
+orders.push(
+    createOrder("ord-1007", {
+        number: 1007,
+        clientId: "user-client-yara",
+        createdAt: isoDaysAgo(6),
+        status: "DELIVERED",
+        productionStatus: "COMPLETED",
+        deliveredBy: "user-driver-yusuf",
+        deliveredAt: isoDaysAgo(5),
+        items: [
+            {
+                id: "ord-1007-item-1",
+                productId: "prod-kunefe",
+                quantity: 3,
+                selectionIds: ["opt-kunafa-12"],
+                productionStatus: "COMPLETED",
+                deliveredQuantity: 3,
+                unitPrice: 370,
+                totalPrice: 1110,
+            },
+            {
+                id: "ord-1007-item-2",
+                productId: "prod-pistachio-latte",
+                quantity: 2,
+                selectionIds: ["opt-pistachio-5kg"],
+                productionStatus: "COMPLETED",
+                deliveredQuantity: 2,
+                unitPrice: 400,
+                totalPrice: 800,
+            },
+        ],
+        notes: "Corporate tasting kits.",
+    })
+);
+
+orders.push(
+    createOrder("ord-1008", {
+        number: 1008,
+        clientId: "user-client-ibrahim",
+        createdAt: isoDaysAgo(7),
+        status: "PARTIALLY_DELIVERED",
+        productionStatus: "COMPLETED",
+        deliveredBy: "user-driver-yusuf",
+        deliveredAt: isoDaysAgo(6),
+        items: [
+            {
+                id: "ord-1008-item-1",
+                productId: "prod-sourdough",
+                quantity: 60,
+                selectionIds: ["opt-sourdough-dukkah"],
+                productionStatus: "COMPLETED",
+                deliveredQuantity: 50,
+                unitPrice: 34,
+                totalPrice: 2040,
+            },
+        ],
+        deliveryNotes: "Short shipped 10 loaves per client request.",
+    })
+);
+
+orders.push(
+    createOrder("ord-1009", {
+        number: 1009,
+        clientId: "user-client-mira",
+        createdAt: isoDaysAgo(10),
+        status: "FAILED",
+        productionStatus: "CANCELLED",
+        items: [
+            {
+                id: "ord-1009-item-1",
+                productId: "prod-baklava",
+                quantity: 1,
+                selectionIds: ["opt-baklava-tray-large", "opt-baklava-gold"],
+                productionStatus: "CANCELLED",
+                producedQuantity: 0,
+                unitPrice: 335,
+                totalPrice: 335,
+            },
+        ],
+        deliveryNotes: "Event postponed by client.",
+    })
+);
+
 const favorites: Record<string, string[]> = {
     "user-client-lina": ["prod-baklava", "prod-pistachio-latte"],
     "user-client-omar": ["prod-sourdough", "prod-mini-quiche"],
+    "user-client-samira": ["prod-baklava", "prod-mini-quiche"],
+    "user-client-yara": ["prod-kunefe", "prod-babka"],
+    "user-client-ibrahim": ["prod-sourdough", "prod-babka"],
+    "user-client-mira": ["prod-mini-quiche"],
 };
 
 export const createDemoState = (): DemoState => {

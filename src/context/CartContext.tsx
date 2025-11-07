@@ -74,6 +74,26 @@ export interface CartItemPayload {
     selectedOptionItemIds: string[];
 }
 
+type OrderItemSelectedOption = {
+    optionItem: {
+        id: string;
+    };
+};
+
+interface RepeatableOrderItem {
+    productId: string;
+    quantity: number;
+    selectedOptions?: OrderItemSelectedOption[];
+}
+
+interface RepeatableOrderItemSource
+    extends Omit<RepeatableOrderItem, "productId"> {
+    productId?: string | null;
+    product?: {
+        id?: string | null;
+    } | null;
+}
+
 interface CartContextType {
     cart: CartItem[];
     loading: boolean;
@@ -94,15 +114,7 @@ interface CartContextType {
     clearCart: () => Promise<void>;
     refetchCart: () => Promise<void>;
     loadCartFromOrder: (order: unknown) => Promise<{
-        activeItems: Array<{
-            productId: string;
-            quantity: number;
-            selectedOptions?: Array<{
-                optionItem: {
-                    id: string;
-                };
-            }>;
-        }>;
+        activeItems: RepeatableOrderItem[];
         inactiveItems: Array<{
             id: string;
             name: string;
@@ -110,15 +122,7 @@ interface CartContextType {
             unit: string;
         }>;
     } | void>;
-    loadActiveItemsToCart: (activeItems: Array<{
-        productId: string;
-        quantity: number;
-        selectedOptions?: Array<{
-            optionItem: {
-                id: string;
-            };
-        }>;
-    }>) => Promise<void>;
+    loadActiveItemsToCart: (activeItems: RepeatableOrderItem[]) => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -126,6 +130,46 @@ const isDemoMode =
     process.env.NEXT_PUBLIC_USE_MOCK_DATA !== undefined
         ? process.env.NEXT_PUBLIC_USE_MOCK_DATA !== "false"
         : true;
+
+const resolveOrderItemProductId = (
+    item: RepeatableOrderItemSource
+): string | null => {
+    if (item.productId && typeof item.productId === "string") {
+        const trimmed = item.productId.trim();
+        if (trimmed) {
+            return trimmed;
+        }
+    }
+    const nestedId =
+        item.product && typeof item.product === "object"
+            ? item.product.id
+            : null;
+    return typeof nestedId === "string" && nestedId.trim()
+        ? nestedId.trim()
+        : null;
+};
+
+const normalizeOrderItemsForCart = (
+    items: RepeatableOrderItemSource[]
+): RepeatableOrderItem[] => {
+    return items.reduce<RepeatableOrderItem[]>((acc, item) => {
+        const productId = resolveOrderItemProductId(item);
+        if (!productId) {
+            console.warn(
+                "[Cart] Skipping order item without product ID",
+                item
+            );
+            return acc;
+        }
+
+        acc.push({
+            productId,
+            quantity: item.quantity,
+            selectedOptions: item.selectedOptions ?? [],
+        });
+        return acc;
+    }, []);
+};
 
 function findCartItemId(
     cart: CartItem[],
@@ -683,24 +727,31 @@ export function CartProvider({ children }: { children: ReactNode }) {
     };
 
     // Deaktive ürünleri kontrol et ve ayır
-    const checkInactiveProducts = async (orderItems: Array<{
-        productId: string;
-        quantity: number;
-        selectedOptions?: Array<{
-            optionItem: {
-                id: string;
-            };
-        }>;
-    }>) => {
+    const checkInactiveProducts = async (
+        orderItems: RepeatableOrderItem[]
+    ) => {
+        if (orderItems.length === 0) {
+            return { activeItems: [], inactiveItems: [] };
+        }
+
         try {
             // Tüm ürün ID'lerini topla
-            const productIds = orderItems.map(item => item.productId);
+            const productIds = Array.from(
+                new Set(orderItems.map((item) => item.productId))
+            );
+
+            if (productIds.length === 0) {
+                return { activeItems: [], inactiveItems: [] };
+            }
 
             // Ürün bilgilerini çek
             const products = await fetchProductsByIds(productIds);
+            const productMap = new Map(
+                products.map((product) => [product.id, product])
+            );
 
             // Aktif ve deaktive ürünleri ayır
-            const activeItems: typeof orderItems = [];
+            const activeItems: RepeatableOrderItem[] = [];
             const inactiveItems: Array<{
                 id: string;
                 name: string;
@@ -708,8 +759,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 unit: string;
             }> = [];
 
-            orderItems.forEach(item => {
-                const product = products.find(p => p.id === item.productId);
+            orderItems.forEach((item) => {
+                const product = productMap.get(item.productId);
 
                 if (product && product.isActive) {
                     activeItems.push(item);
@@ -721,11 +772,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
                         unit: product.unit,
                     });
                 } else {
+                    inactiveItems.push({
+                        id: item.productId,
+                        name: "Unavailable item",
+                        quantity: item.quantity,
+                        unit: "-",
+                    });
                 }
             });
 
             return { activeItems, inactiveItems };
-        } catch {
+        } catch (error) {
+            console.warn(
+                "[Cart] Failed to validate inactive products, assuming active",
+                error
+            );
             // Hata durumunda tüm ürünleri aktif kabul et
             return { activeItems: orderItems, inactiveItems: [] };
         }
@@ -736,15 +797,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         order: unknown
     ): Promise<
         | {
-              activeItems: Array<{
-                  productId: string;
-                  quantity: number;
-                  selectedOptions?: Array<{
-                      optionItem: {
-                          id: string;
-                      };
-                  }>;
-              }>;
+              activeItems: RepeatableOrderItem[];
               inactiveItems: Array<{
                   id: string;
                   name: string;
@@ -765,20 +818,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
         try {
             console.log("[Cart] loadCartFromOrder start", order);
             const orderData = order as {
-                items: Array<{
-                    productId: string;
-                    quantity: number;
-                    selectedOptions?: Array<{
-                        optionItem: {
-                            id: string;
-                        };
-                    }>;
-                }>;
+                items: RepeatableOrderItemSource[];
             };
+
+            const normalizedItems = normalizeOrderItemsForCart(orderData.items);
 
             // Deaktive ürünleri kontrol et
             const { activeItems, inactiveItems } =
-                await checkInactiveProducts(orderData.items);
+                await checkInactiveProducts(normalizedItems);
             const hasActiveItems = activeItems.length > 0;
             if (!hasActiveItems) {
                 console.warn(
@@ -853,15 +900,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     };
 
     // Sadece aktif ürünleri sepete yükle
-    const loadActiveItemsToCart = async (activeItems: Array<{
-        productId: string;
-        quantity: number;
-        selectedOptions?: Array<{
-            optionItem: {
-                id: string;
-            };
-        }>;
-    }>) => {
+    const loadActiveItemsToCart = async (
+        activeItems: RepeatableOrderItem[]
+    ) => {
         setLoading(true);
         setError(null);
 

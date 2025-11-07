@@ -5,6 +5,7 @@ import type {
     AdminAnalyticsProductionResponse,
     CustomerKPIMetrics,
     CustomerSummary,
+    DistributorClientDetail,
     DistributorDailyClientSummaryResponse,
     DistributorDailyOrdersResponse,
     DistributorDailyProductSummaryResponse,
@@ -188,6 +189,90 @@ class MockServer {
             totalCustomers: clients.length,
             activeCustomers: clients.filter((c) => c.isActive).length,
             inactiveCustomers: clients.filter((c) => !c.isActive).length,
+        };
+    }
+
+    private getClientsForDistributor(user: DemoUser): DemoUser[] {
+        if (user.role === "ADMIN") {
+            return this.state.users.filter((candidate) => candidate.role === "CLIENT");
+        }
+        if (user.role === "DISTRIBUTOR") {
+            return this.state.users.filter(
+                (candidate) =>
+                    candidate.role === "CLIENT" &&
+                    candidate.assignedDistributorId === user.id
+            );
+        }
+        return [];
+    }
+
+    private canAccessClient(user: DemoUser, client: DemoUser): boolean {
+        if (user.role === "ADMIN") return true;
+        if (user.role === "DISTRIBUTOR") {
+            return client.assignedDistributorId === user.id;
+        }
+        return false;
+    }
+
+    private buildDistributorClientDetail(client: DemoUser): DistributorClientDetail {
+        const priceList = client.priceListId
+            ? this.state.priceLists.find((pl) => pl.id === client.priceListId) ?? null
+            : null;
+        const assignedDistributor =
+            client.assignedDistributorId &&
+            this.state.users.find((user) => user.id === client.assignedDistributorId);
+
+        const clientOrders = this.state.orders.filter(
+            (order) => order.user?.id === client.id
+        );
+        const deliveredStatuses = new Set<Order["deliveryStatus"]>([
+            "DELIVERED",
+            "PARTIALLY_DELIVERED",
+        ]);
+        const totalOrderAmount = clientOrders.reduce((sum, order) => {
+            if (!deliveredStatuses.has(order.deliveryStatus)) {
+                return sum;
+            }
+            const value =
+                order.finalTotalAmount ??
+                order.finalRetailTotalAmount ??
+                order.initialTotalAmount ??
+                order.initialRetailTotalAmount ??
+                0;
+            return sum + (value || 0);
+        }, 0);
+
+        return {
+            id: client.id,
+            email: client.email,
+            name: client.name,
+            surname: client.surname,
+            phone: client.phone ?? null,
+            role: "CLIENT",
+            isActive: client.isActive,
+            companyName: client.companyName,
+            address: client.address ?? null,
+            productGroup: client.productGroup,
+            priceListId: client.priceListId ?? null,
+            createdAt: client.createdAt,
+            priceList: priceList
+                ? {
+                      id: priceList.id,
+                      name: priceList.name,
+                      type: priceList.type,
+                      distributorId: priceList.distributorId,
+                  }
+                : null,
+            assignedDistributor: assignedDistributor
+                ? {
+                      id: assignedDistributor.id,
+                      name: assignedDistributor.name,
+                      surname: assignedDistributor.surname,
+                      email: assignedDistributor.email,
+                  }
+                : null,
+            orderCount: clientOrders.length,
+            totalOrderAmount: Number(totalOrderAmount.toFixed(2)),
         };
     }
 
@@ -1799,6 +1884,89 @@ class MockServer {
                     reassignedUsers: [],
                 },
             } as T;
+        }
+
+        if (method === "GET" && path === "/distributor/clients") {
+            const distributor = this.ensureAuth(config, ["DISTRIBUTOR", "ADMIN"]);
+            const page = Number(query.get("page") || "1");
+            const limit = Number(query.get("limit") || "10");
+            const clients = this.getClientsForDistributor(distributor);
+            const sorted = [...clients].sort((a, b) => {
+                const aLabel = a.companyName || `${a.name} ${a.surname}`.trim();
+                const bLabel = b.companyName || `${b.name} ${b.surname}`.trim();
+                return aLabel.localeCompare(bLabel);
+            });
+            const paged = paginate(sorted, page, limit);
+            return {
+                data: paged.data.map((client) => this.toPublicUser(client)),
+                pagination: paged.pagination,
+            } as T;
+        }
+
+        if (path.startsWith("/distributor/clients/")) {
+            const distributor = this.ensureAuth(config, ["DISTRIBUTOR", "ADMIN"]);
+            const segments = path.split("/");
+            const clientId = segments[3];
+            if (!clientId) {
+                throw new Error("Client ID missing");
+            }
+
+            const client = this.state.users.find(
+                (user) => user.id === clientId && user.role === "CLIENT"
+            );
+            if (!client || !this.canAccessClient(distributor, client)) {
+                throw new Error("Client not found");
+            }
+
+            if (segments.length === 4 && method === "GET") {
+                return this.buildDistributorClientDetail(client) as T;
+            }
+
+            if (
+                segments.length === 5 &&
+                segments[4] === "price-list" &&
+                method === "PUT"
+            ) {
+                const payload = (data as { priceListId?: string | null }) ?? {};
+                const nextPriceListId =
+                    payload.priceListId === undefined
+                        ? null
+                        : payload.priceListId;
+                if (nextPriceListId) {
+                    const targetList = this.state.priceLists.find(
+                        (list) => list.id === nextPriceListId
+                    );
+                    if (!targetList) {
+                        throw new Error("Price list not found");
+                    }
+                    if (
+                        distributor.role === "DISTRIBUTOR" &&
+                        targetList.distributorId &&
+                        targetList.distributorId !== distributor.id
+                    ) {
+                        throw new Error("You cannot assign this price list.");
+                    }
+                }
+                client.priceListId = nextPriceListId;
+                return this.toPublicUser(client) as T;
+            }
+
+            if (
+                segments.length === 5 &&
+                segments[4] === "orders" &&
+                method === "GET"
+            ) {
+                const page = Number(query.get("page") || "1");
+                const limit = Number(query.get("limit") || "10");
+                const clientOrders = this.state.orders
+                    .filter((order) => order.user?.id === client.id)
+                    .sort(
+                        (a, b) =>
+                            new Date(b.createdAt).getTime() -
+                            new Date(a.createdAt).getTime()
+                    );
+                return paginate(clientOrders, page, limit) as T;
+            }
         }
 
         // Orders (admin)
