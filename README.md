@@ -16,7 +16,9 @@ Multi-role catering management UI for Deras (Admin, Client, Chef, Driver, Distri
 
 The repository ships with a full-featured mock backend so you can explore every role without connecting to the live API. Mock mode is **enabled by default** (`NEXT_PUBLIC_USE_MOCK_DATA` defaults to `true`). Generated demo JWTs keep AuthContext behaviour unchanged.
 
-**Quick Role Switching**: In demo mode, you'll see a sticky dropdown in the top-right corner of all pages. Click it to instantly switch between different user roles without logging out. Perfect for exploring the full platform!
+**🎉 Welcome Guide**: When you first open the demo, a welcome modal will automatically appear, explaining all features and providing a quick guide to navigating the platform. You can reopen this guide anytime by clicking the blue info button (ℹ️) in the bottom-left corner.
+
+**Quick Role Switching**: In demo mode, you'll see a sticky dropdown in the top-right corner of all pages. Click it to instantly switch between different user roles without logging out. Perfect for exploring the full platform! You can also drag it anywhere on the screen and minimize it when not needed.
 
 | Role             | Email                        | Password  |
 | ---------------- | ---------------------------- | --------- |

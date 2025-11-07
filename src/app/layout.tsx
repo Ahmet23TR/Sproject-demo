@@ -15,6 +15,7 @@ import { ErrorBoundary } from "../components/ui/ErrorBoundary";
 import { BackgroundJobProvider } from "../components/ui/BackgroundJobProvider";
 import { AppLayout } from "../components/layout/AppLayout";
 import DemoRoleSwitcher from "../components/DemoRoleSwitcher";
+import DemoWelcomeGuide from "../components/DemoWelcomeGuide";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -56,6 +57,7 @@ export default function RootLayout({
                                                     <NotificationHandler />
                                                     <GlobalLoadingOverlay />
                                                     <DemoRoleSwitcher />
+                                                    <DemoWelcomeGuide />
                                                     <AppLayout>
                                                         <GlobalEventHandler>
                                                             {children}
