@@ -120,15 +120,14 @@ export default function DemoRoleSwitcher() {
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
         // Store start time to distinguish click from drag
         setDragStartTime(Date.now());
-        
+
         // Don't start dragging if clicking on interactive elements (except in collapsed mode)
         const target = e.target as HTMLElement;
         if (
-            !collapsed && (
-                target.closest(".MuiSelect-root") ||
+            !collapsed &&
+            (target.closest(".MuiSelect-root") ||
                 target.closest(".MuiMenuItem-root") ||
-                target.closest("button")
-            )
+                target.closest("button"))
         ) {
             return;
         }
@@ -231,7 +230,12 @@ export default function DemoRoleSwitcher() {
                             justifyContent: "space-between",
                             mb: 1.5,
                         }}>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Box
+                            sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                            }}>
                             <Chip
                                 label="DEMO MODE"
                                 color="secondary"
@@ -259,7 +263,9 @@ export default function DemoRoleSwitcher() {
                                 },
                             }}
                             aria-label="Collapse demo role switcher">
-                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1 }}>
+                            <Typography
+                                variant="body2"
+                                sx={{ fontWeight: 600, lineHeight: 1 }}>
                                 −
                             </Typography>
                         </Box>

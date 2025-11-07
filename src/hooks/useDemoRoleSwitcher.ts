@@ -38,21 +38,21 @@ export function useDemoRoleSwitcher(): UseDemoRoleSwitcherReturn {
                     DRIVER: "/driver/dashboard",
                     DISTRIBUTOR: "/distributor/summary",
                 };
-                
+
                 const targetPath = dashboardPaths[targetUser.role] || "/";
-                
+
                 // Login with the new user
                 const response = await authLogin({
                     identifier: targetUser.email,
                     password: targetUser.password,
                 });
-                
+
                 // Clear old session data first
                 localStorage.removeItem("token");
-                
+
                 // Set new token directly to localStorage
                 localStorage.setItem("token", response.token);
-                
+
                 // Force a full page reload to the target dashboard
                 // This ensures all contexts are reset with the new user
                 window.location.href = targetPath;
