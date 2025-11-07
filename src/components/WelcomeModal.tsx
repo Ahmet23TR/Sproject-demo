@@ -102,7 +102,7 @@ export default function WelcomeModal({ open, onClose }: WelcomeModalProps) {
                     </Box>
                     <Box>
                         <Typography variant="h5" fontWeight={600}>
-                            Welcome to Deras Demo
+                            Welcome to Demo
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                             Explore our multi-role catering platform
@@ -118,10 +118,7 @@ export default function WelcomeModal({ open, onClose }: WelcomeModalProps) {
                     <Typography variant="h6" gutterBottom fontWeight={600}>
                         🎯 What is this demo?
                     </Typography>
-                    <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        paragraph>
+                    <Typography variant="body2" color="primary.main" paragraph>
                         This is a fully functional demonstration of
                         comprehensive catering management platform. You can
                         explore different user roles and features without any
@@ -145,6 +142,12 @@ export default function WelcomeModal({ open, onClose }: WelcomeModalProps) {
                             <ListItemText
                                 primary="Role-based dashboards"
                                 secondary="Admin, Client, Chef, Driver, and Distributor interfaces"
+                                primaryTypographyProps={{
+                                    color: "primary.main",
+                                }}
+                                secondaryTypographyProps={{
+                                    color: "primary.main",
+                                }}
                             />
                         </ListItem>
                         <ListItem>
@@ -157,6 +160,12 @@ export default function WelcomeModal({ open, onClose }: WelcomeModalProps) {
                             <ListItemText
                                 primary="Complete workflows"
                                 secondary="Order management, production tracking, delivery coordination"
+                                primaryTypographyProps={{
+                                    color: "primary.main",
+                                }}
+                                secondaryTypographyProps={{
+                                    color: "primary.main",
+                                }}
                             />
                         </ListItem>
                         <ListItem>
@@ -169,6 +178,12 @@ export default function WelcomeModal({ open, onClose }: WelcomeModalProps) {
                             <ListItemText
                                 primary="Rich demo data"
                                 secondary="Pre-populated products, orders, analytics, and user interactions"
+                                primaryTypographyProps={{
+                                    color: "primary.main",
+                                }}
+                                secondaryTypographyProps={{
+                                    color: "primary.main",
+                                }}
                             />
                         </ListItem>
                     </List>
@@ -182,10 +197,7 @@ export default function WelcomeModal({ open, onClose }: WelcomeModalProps) {
                         sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                         <SwapHorizIcon /> How to Switch Roles
                     </Typography>
-                    <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        paragraph>
+                    <Typography variant="body2" color="primary.main" paragraph>
                         Look for the{" "}
                         <Chip
                             label="DEMO MODE"
@@ -208,7 +220,10 @@ export default function WelcomeModal({ open, onClose }: WelcomeModalProps) {
                             borderRadius: 2,
                         }}>
                         <TouchAppIcon color="primary" />
-                        <Typography variant="body2" fontWeight={500}>
+                        <Typography
+                            variant="body2"
+                            fontWeight={500}
+                            color="primary.main">
                             You can also drag the demo switcher anywhere on the
                             screen and minimize it when not needed!
                         </Typography>
@@ -219,10 +234,7 @@ export default function WelcomeModal({ open, onClose }: WelcomeModalProps) {
                     <Typography variant="h6" gutterBottom fontWeight={600}>
                         🔑 Demo User Credentials
                     </Typography>
-                    <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        paragraph>
+                    <Typography variant="body2" color="primary.main" paragraph>
                         Use these credentials to login, or simply use the role
                         switcher:
                     </Typography>
