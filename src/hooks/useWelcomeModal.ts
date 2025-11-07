@@ -18,13 +18,13 @@ export function useWelcomeModal(): UseWelcomeModalReturn {
 
         // Check if this is the first visit
         const hasSeenWelcome = localStorage.getItem(WELCOME_MODAL_KEY);
-        
+
         if (!hasSeenWelcome) {
             // Small delay for better UX - let the page load first
             const timer = setTimeout(() => {
                 setIsOpen(true);
             }, 500);
-            
+
             return () => clearTimeout(timer);
         }
     }, []);
