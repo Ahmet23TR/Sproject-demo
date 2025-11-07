@@ -1,9 +1,4 @@
-import type {
-    Order,
-    OrderItem,
-    PriceListItem,
-    Product,
-} from "@/types/data";
+import type { Order, OrderItem, PriceListItem, Product } from "@/types/data";
 import { DEMO_DATA_VERSION } from "@/config/demo";
 import type { DemoState, DemoUser, DemoPriceListDetail } from "./types";
 
@@ -166,27 +161,27 @@ const products: Product[] = [
         productGroup: "BAKERY",
         basePrice: 18,
         optionGroups: [
-                {
-                    id: "opt-quiche-pack",
-                    name: "Pack Size",
-                    isRequired: true,
-                    allowMultiple: false,
-                    items: [
-                        {
-                            id: "opt-quiche-12",
-                            name: "Pack of 12",
-                            priceAdjustment: 0,
-                            multiplier: 1,
-                        },
-                        {
-                            id: "opt-quiche-24",
-                            name: "Pack of 24",
-                            priceAdjustment: 180,
-                            multiplier: 2.1,
-                        },
-                    ],
-                },
-            ],
+            {
+                id: "opt-quiche-pack",
+                name: "Pack Size",
+                isRequired: true,
+                allowMultiple: false,
+                items: [
+                    {
+                        id: "opt-quiche-12",
+                        name: "Pack of 12",
+                        priceAdjustment: 0,
+                        multiplier: 1,
+                    },
+                    {
+                        id: "opt-quiche-24",
+                        name: "Pack of 24",
+                        priceAdjustment: 180,
+                        multiplier: 2.1,
+                    },
+                ],
+            },
+        ],
     },
     {
         id: "prod-babka",
@@ -450,11 +445,11 @@ const priceListItems = (listId: string): PriceListItem[] => {
             .flatMap((product) => product.optionGroups ?? [])
             .flatMap((group) => group.items.map((item) => ({ group, item })))
             .find(({ item }) => item.id === entry.optionItemId);
-        
+
         const productForOption = products.find((p) =>
             (p.optionGroups ?? [])
                 .map((g) => g.id)
-                .includes(option?.group.id ?? '')
+                .includes(option?.group.id ?? "")
         );
 
         return {
@@ -466,20 +461,21 @@ const priceListItems = (listId: string): PriceListItem[] => {
                 typeof option?.item.multiplier === "string"
                     ? Number(option!.item.multiplier)
                     : option?.item.multiplier ?? null,
-            optionItem: option && productForOption
-                ? {
-                      id: option.item.id,
-                      name: option.item.name,
-                      optionGroup: {
-                          id: option.group.id,
-                          name: option.group.name,
-                          product: {
-                              id: productForOption.id,
-                              name: productForOption.name,
+            optionItem:
+                option && productForOption
+                    ? {
+                          id: option.item.id,
+                          name: option.item.name,
+                          optionGroup: {
+                              id: option.group.id,
+                              name: option.group.name,
+                              product: {
+                                  id: productForOption.id,
+                                  name: productForOption.name,
+                              },
                           },
-                      },
-                  }
-                : undefined,
+                      }
+                    : undefined,
         };
     });
 };
@@ -583,8 +579,8 @@ export const createOrder = (
                 ? {
                       id: product.id,
                       name: product.name,
-                      unit: product.unit ?? 'PIECE',
-                      productGroup: product.productGroup ?? 'SWEETS',
+                      unit: product.unit ?? "PIECE",
+                      productGroup: product.productGroup ?? "SWEETS",
                   }
                 : null,
             selectedOptions,

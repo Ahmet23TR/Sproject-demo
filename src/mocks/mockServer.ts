@@ -28,9 +28,9 @@ interface ProductPayload {
     description?: string;
     imageUrl?: string;
     isActive?: boolean;
-    unit?: 'PIECE' | 'KG' | 'TRAY';
+    unit?: "PIECE" | "KG" | "TRAY";
     categoryId?: string;
-    productGroup?: 'SWEETS' | 'BAKERY';
+    productGroup?: "SWEETS" | "BAKERY";
 }
 
 // ProductionItem type for production tracking
@@ -39,13 +39,13 @@ interface ProductionItem {
     productName: string;
     categoryName: string | null;
     quantity: number;
-    unit: 'PIECE' | 'KG' | 'TRAY';
+    unit: "PIECE" | "KG" | "TRAY";
     orderId: string;
     status: string;
     client: string;
     scheduledDate: string;
     variantName?: string;
-    productGroup?: 'SWEETS' | 'BAKERY';
+    productGroup?: "SWEETS" | "BAKERY";
     total?: number;
 }
 
@@ -57,11 +57,7 @@ const normalizePath = (path: string) => {
     return withoutBase.replace(/^\/api/, "") || "/";
 };
 
-const paginate = <T>(
-    data: T[],
-    page: number = 1,
-    limit: number = 10
-) => {
+const paginate = <T>(data: T[], page: number = 1, limit: number = 10) => {
     const start = (page - 1) * limit;
     const paged = data.slice(start, start + limit);
     return {
@@ -80,11 +76,15 @@ const paginate = <T>(
 const toDateKey = (iso: string) => iso.split("T")[0];
 
 const getIsoWeekLabel = (date: Date) => {
-    const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const target = new Date(
+        Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+    );
     const dayNum = target.getUTCDay() || 7;
     target.setUTCDate(target.getUTCDate() + 4 - dayNum);
     const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
-    const weekNo = Math.ceil(((target.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+    const weekNo = Math.ceil(
+        ((target.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
+    );
     return `${target.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
 };
 
@@ -98,7 +98,9 @@ class MockServer {
         const base =
             rawUrl.startsWith("http://") || rawUrl.startsWith("https://")
                 ? rawUrl
-                : `https://mock.local${rawUrl.startsWith("/") ? "" : "/"}${rawUrl}`;
+                : `https://mock.local${
+                      rawUrl.startsWith("/") ? "" : "/"
+                  }${rawUrl}`;
         const url = new URL(base);
         const query = new URLSearchParams(url.search);
         if (params) {
@@ -127,9 +129,7 @@ class MockServer {
         return { path: normalizePath(url.pathname), query };
     }
 
-    private getUserFromConfig(
-        config?: AxiosRequestConfig
-    ): DemoUser | null {
+    private getUserFromConfig(config?: AxiosRequestConfig): DemoUser | null {
         const headerValue =
             config?.headers &&
             (config.headers["Authorization"] ||
@@ -140,9 +140,7 @@ class MockServer {
         const token = headerValue.replace(/^Bearer\s+/i, "").trim();
         const payload = decodeMockToken(token);
         if (!payload?.id) return null;
-        return (
-            this.state.users.find((user) => user.id === payload.id) ?? null
-        );
+        return this.state.users.find((user) => user.id === payload.id) ?? null;
     }
 
     private ensureAuth(
@@ -209,7 +207,9 @@ class MockServer {
     }
 
     private getCustomerSummary(): CustomerSummary {
-        const clients = this.state.users.filter((user) => user.role === "CLIENT");
+        const clients = this.state.users.filter(
+            (user) => user.role === "CLIENT"
+        );
         return {
             totalCustomers: clients.length,
             activeCustomers: clients.filter((c) => c.isActive).length,
@@ -219,7 +219,9 @@ class MockServer {
 
     private getClientsForDistributor(user: DemoUser): DemoUser[] {
         if (user.role === "ADMIN") {
-            return this.state.users.filter((candidate) => candidate.role === "CLIENT");
+            return this.state.users.filter(
+                (candidate) => candidate.role === "CLIENT"
+            );
         }
         if (user.role === "DISTRIBUTOR") {
             return this.state.users.filter(
@@ -239,13 +241,19 @@ class MockServer {
         return false;
     }
 
-    private buildDistributorClientDetail(client: DemoUser): DistributorClientDetail {
+    private buildDistributorClientDetail(
+        client: DemoUser
+    ): DistributorClientDetail {
         const priceList = client.priceListId
-            ? this.state.priceLists.find((pl) => pl.id === client.priceListId) ?? null
+            ? this.state.priceLists.find(
+                  (pl) => pl.id === client.priceListId
+              ) ?? null
             : null;
         const assignedDistributor =
             client.assignedDistributorId &&
-            this.state.users.find((user) => user.id === client.assignedDistributorId);
+            this.state.users.find(
+                (user) => user.id === client.assignedDistributorId
+            );
 
         const clientOrders = this.state.orders.filter(
             (order) => order.user?.id === client.id
@@ -322,8 +330,8 @@ class MockServer {
                         categoryName: null,
                         quantity: remaining,
                         orderId: order.id,
-                        status: 'PENDING',
-                        client: order.user?.companyName ?? '',
+                        status: "PENDING",
+                        client: order.user?.companyName ?? "",
                         scheduledDate: order.createdAt,
                         variantName:
                             item.selectedOptions?.map(
@@ -354,7 +362,9 @@ class MockServer {
                 date.setDate(date.getDate() - (days - 1 - index));
                 const revenue = this.state.orders
                     .filter(
-                        (order) => toDateKey(order.createdAt) === toDateKey(date.toISOString())
+                        (order) =>
+                            toDateKey(order.createdAt) ===
+                            toDateKey(date.toISOString())
                     )
                     .reduce(
                         (sum, order) => sum + (order.finalTotalAmount || 0),
@@ -376,26 +386,29 @@ class MockServer {
                 todaysTotalRevenue: Number(todaysRevenue.toFixed(2)),
                 todaysCustomerCount: todaysOrders
                     .map((order) => order.user?.id)
-                    .filter((value, idx, arr) => value && arr.indexOf(value) === idx)
-                    .length,
+                    .filter(
+                        (value, idx, arr) => value && arr.indexOf(value) === idx
+                    ).length,
                 customerGrowthPercentage: "+4.8%",
             },
             charts: {
                 last7DaysRevenue: chartSeries(7),
                 last30DaysRevenue: chartSeries(30),
                 last3MonthsRevenue: chartSeries(90),
-                productionByGroupToday: (["SWEETS", "BAKERY"] as const).map((group) => ({
-                    group: group as 'SWEETS' | 'BAKERY',
-                    total: this.getProductionList(todayKey)
-                        .filter((item) => item.productGroup === group)
-                        .reduce((sum, item) => sum + (item.total ?? 0), 0),
-                    amount: productGroupBreakdown.find(
-                        (item) => item.group === group
-                    )?.amount,
-                })),
-                revenueByGroupToday: productGroupBreakdown.map(item => ({
+                productionByGroupToday: (["SWEETS", "BAKERY"] as const).map(
+                    (group) => ({
+                        group: group as "SWEETS" | "BAKERY",
+                        total: this.getProductionList(todayKey)
+                            .filter((item) => item.productGroup === group)
+                            .reduce((sum, item) => sum + (item.total ?? 0), 0),
+                        amount: productGroupBreakdown.find(
+                            (item) => item.group === group
+                        )?.amount,
+                    })
+                ),
+                revenueByGroupToday: productGroupBreakdown.map((item) => ({
                     ...item,
-                    group: item.group as 'SWEETS' | 'BAKERY'
+                    group: item.group as "SWEETS" | "BAKERY",
                 })),
                 orderStatusDistribution: this.state.orders.reduce(
                     (acc, order) => {
@@ -409,9 +422,16 @@ class MockServer {
         };
     }
 
-    private filterOrdersByDateRange(start?: string | null, end?: string | null) {
-        const startTime = start ? new Date(start).getTime() : Number.NEGATIVE_INFINITY;
-        const endTime = end ? new Date(end).getTime() : Number.POSITIVE_INFINITY;
+    private filterOrdersByDateRange(
+        start?: string | null,
+        end?: string | null
+    ) {
+        const startTime = start
+            ? new Date(start).getTime()
+            : Number.NEGATIVE_INFINITY;
+        const endTime = end
+            ? new Date(end).getTime()
+            : Number.POSITIVE_INFINITY;
         return this.state.orders.filter((order) => {
             const created = new Date(order.createdAt).getTime();
             return created >= startTime && created <= endTime;
@@ -454,15 +474,13 @@ class MockServer {
             failedOrCancelledRate:
                 orderCount > 0
                     ? Number(
-                          (
-                              (failedOrCancelled / orderCount) *
-                              100
-                          ).toFixed(2)
+                          ((failedOrCancelled / orderCount) * 100).toFixed(2)
                       )
                     : 0,
         };
 
-        const timeBuckets: Record<string, { initial: number; final: number }> = {};
+        const timeBuckets: Record<string, { initial: number; final: number }> =
+            {};
         scopedOrders.forEach((order) => {
             const dateObj = new Date(order.createdAt);
             const dateKey =
@@ -498,7 +516,9 @@ class MockServer {
                 orderNumber: String(order.orderNumber),
                 customerName:
                     order.user?.companyName ||
-                    `${order.user?.name ?? ""} ${order.user?.surname ?? ""}`.trim(),
+                    `${order.user?.name ?? ""} ${
+                        order.user?.surname ?? ""
+                    }`.trim(),
                 initialAmount: order.initialTotalAmount || 0,
                 finalAmount: order.finalTotalAmount || 0,
                 lossAmount:
@@ -527,7 +547,9 @@ class MockServer {
         const endDate = filters.get("endDate");
         const scopedOrders = this.filterOrdersByDateRange(startDate, endDate);
         const uniqueCustomers = new Set(
-            scopedOrders.map((order) => order.user?.id).filter(Boolean) as string[]
+            scopedOrders
+                .map((order) => order.user?.id)
+                .filter(Boolean) as string[]
         );
         const newCustomers = scopedOrders.filter((order) => {
             if (!order.user?.id) return false;
@@ -604,9 +626,8 @@ class MockServer {
                     this.state.priceLists.find(
                         (list) =>
                             list.id ===
-                            this.state.users.find(
-                                (user) => user.id === userId
-                            )?.priceListId
+                            this.state.users.find((user) => user.id === userId)
+                                ?.priceListId
                     )?.name || "Standard Retail",
             }))
             .sort((a, b) => b.totalSpending - a.totalSpending)
@@ -645,9 +666,7 @@ class MockServer {
         return trend;
     }
 
-    private getEnhancedCustomersData(
-        query: URLSearchParams
-    ): {
+    private getEnhancedCustomersData(query: URLSearchParams): {
         data: EnhancedCustomerData[];
         pagination: {
             totalItems: number;
@@ -675,14 +694,17 @@ class MockServer {
             const orderCount = clientOrders.length;
             const averageOrderValue =
                 orderCount > 0 ? totalSpending / orderCount : 0;
-            
+
             const orderDates = clientOrders
-                .map(o => new Date(o.createdAt))
+                .map((o) => new Date(o.createdAt))
                 .sort((a, b) => a.getTime() - b.getTime());
-            const firstOrderDate = orderDates[0]?.toISOString() ?? new Date().toISOString();
-            const lastOrderDate = orderDates[orderDates.length - 1]?.toISOString() ?? new Date().toISOString();
+            const firstOrderDate =
+                orderDates[0]?.toISOString() ?? new Date().toISOString();
+            const lastOrderDate =
+                orderDates[orderDates.length - 1]?.toISOString() ??
+                new Date().toISOString();
             const customerSince = orderDates[0]?.getTime() ?? Date.now();
-            
+
             return {
                 userId: client.id,
                 customerName:
@@ -722,10 +744,7 @@ class MockServer {
             const items = this.state.orders
                 .flatMap((order) => order.items)
                 .filter((item) => item.product?.productGroup === group);
-            const ordered = items.reduce(
-                (sum, item) => sum + item.quantity,
-                0
-            );
+            const ordered = items.reduce((sum, item) => sum + item.quantity, 0);
             const produced = items.reduce(
                 (sum, item) => sum + (item.producedQuantity ?? item.quantity),
                 0
@@ -750,10 +769,7 @@ class MockServer {
             const items = this.state.orders
                 .flatMap((order) => order.items)
                 .filter((item) => item.product?.id === product.id);
-            const ordered = items.reduce(
-                (sum, item) => sum + item.quantity,
-                0
-            );
+            const ordered = items.reduce((sum, item) => sum + item.quantity, 0);
             const produced = items.reduce(
                 (sum, item) => sum + (item.producedQuantity ?? item.quantity),
                 0
@@ -773,7 +789,9 @@ class MockServer {
             return {
                 productId: product.id,
                 productName: product.name,
-                group: (product.productGroup ?? 'SWEETS') as 'SWEETS' | 'BAKERY',
+                group: (product.productGroup ?? "SWEETS") as
+                    | "SWEETS"
+                    | "BAKERY",
                 ordered,
                 produced,
                 cancelled,
@@ -787,27 +805,34 @@ class MockServer {
             byGroup,
             byProduct,
             kpis: {
-                mostPopularProduct: byProduct
-                    .sort((a, b) => b.ordered - a.ordered)
-                    .slice(0, 1)
-                    .map((item) => ({
-                        productId: item.productId,
-                        productName: item.productName,
-                        orderCount: item.ordered,
-                    }))[0] || null,
-                highestRevenueProduct: byProduct
-                    .sort((a, b) => b.totalRevenue - a.totalRevenue)
-                    .slice(0, 1)
-                    .map((item) => ({
-                        productId: item.productId,
-                        productName: item.productName,
-                        totalRevenue: item.totalRevenue,
-                    }))[0] || null,
+                mostPopularProduct:
+                    byProduct
+                        .sort((a, b) => b.ordered - a.ordered)
+                        .slice(0, 1)
+                        .map((item) => ({
+                            productId: item.productId,
+                            productName: item.productName,
+                            orderCount: item.ordered,
+                        }))[0] || null,
+                highestRevenueProduct:
+                    byProduct
+                        .sort((a, b) => b.totalRevenue - a.totalRevenue)
+                        .slice(0, 1)
+                        .map((item) => ({
+                            productId: item.productId,
+                            productName: item.productName,
+                            totalRevenue: item.totalRevenue,
+                        }))[0] || null,
                 cancellationRate: Number(
                     (
-                        (byProduct.reduce((sum, item) => sum + item.cancelled, 0) /
-                            (byProduct.reduce((sum, item) => sum + item.ordered, 0) ||
-                                1)) *
+                        (byProduct.reduce(
+                            (sum, item) => sum + item.cancelled,
+                            0
+                        ) /
+                            (byProduct.reduce(
+                                (sum, item) => sum + item.ordered,
+                                0
+                            ) || 1)) *
                         100
                     ).toFixed(2)
                 ),
@@ -904,9 +929,10 @@ class MockServer {
             if (!item.product) return;
             if (!map.has(item.product.id)) {
                 map.set(item.product.id, {
-                    product: this.state.products.find(
-                        (product) => product.id === item.product?.id
-                    ) ?? null,
+                    product:
+                        this.state.products.find(
+                            (product) => product.id === item.product?.id
+                        ) ?? null,
                     quantity: 0,
                     total: 0,
                 });
@@ -920,24 +946,25 @@ class MockServer {
             productId: entry.product?.id ?? "",
             productName: entry.product?.name ?? "Unknown",
             productUnit: entry.product?.unit ?? "PIECE",
-            optionGroups: entry.product?.optionGroups?.map((group) => ({
-                optionGroupId: group.id,
-                optionGroupName: group.name,
-                isRequired: group.isRequired,
-                allowMultiple: group.allowMultiple ?? false,
-                selectedItems: group.items.map((item) => ({
-                    optionItemId: item.id,
-                    optionItemName: item.name,
-                    defaultPrice:
-                        typeof item.priceAdjustment === "number"
-                            ? item.priceAdjustment
-                            : Number(item.price ?? 0),
-                    multiplier:
-                        typeof item.multiplier === "string"
-                            ? Number(item.multiplier)
-                            : item.multiplier,
-                })),
-            })) ?? [],
+            optionGroups:
+                entry.product?.optionGroups?.map((group) => ({
+                    optionGroupId: group.id,
+                    optionGroupName: group.name,
+                    isRequired: group.isRequired,
+                    allowMultiple: group.allowMultiple ?? false,
+                    selectedItems: group.items.map((item) => ({
+                        optionItemId: item.id,
+                        optionItemName: item.name,
+                        defaultPrice:
+                            typeof item.priceAdjustment === "number"
+                                ? item.priceAdjustment
+                                : Number(item.price ?? 0),
+                        multiplier:
+                            typeof item.multiplier === "string"
+                                ? Number(item.multiplier)
+                                : item.multiplier,
+                    })),
+                })) ?? [],
             totalQuantity: entry.quantity,
             unitPrice:
                 entry.quantity > 0
@@ -1130,10 +1157,7 @@ class MockServer {
         };
     }
 
-    private getChefOrders(
-        chef: DemoUser,
-        query: URLSearchParams
-    ) {
+    private getChefOrders(chef: DemoUser, query: URLSearchParams) {
         const dateFilter = query.get("date");
         const page = Number(query.get("page") || "1");
         const limit = Number(query.get("limit") || "20");
@@ -1236,9 +1260,7 @@ class MockServer {
         throw new Error("Order item not found");
     }
 
-    private getOrdersResponse(
-        query: URLSearchParams
-    ) {
+    private getOrdersResponse(query: URLSearchParams) {
         const page = Number(query.get("page") || "1");
         const limit = Number(query.get("limit") || "10");
         const status = query.get("status");
@@ -1252,9 +1274,7 @@ class MockServer {
         if (search) {
             const normalized = search.toLowerCase();
             filtered = filtered.filter((order) =>
-                order.user?.companyName
-                    ?.toLowerCase()
-                    .includes(normalized)
+                order.user?.companyName?.toLowerCase().includes(normalized)
             );
         }
         filtered.sort(
@@ -1277,10 +1297,34 @@ class MockServer {
                 },
                 availableFilters: {
                     statuses: [
-                        { value: "READY_FOR_DELIVERY", label: "Ready", count: filtered.filter(o => o.deliveryStatus === "READY_FOR_DELIVERY").length },
-                        { value: "DELIVERED", label: "Delivered", count: filtered.filter(o => o.deliveryStatus === "DELIVERED").length },
-                        { value: "FAILED", label: "Failed", count: filtered.filter(o => o.deliveryStatus === "FAILED").length },
-                        { value: "CANCELLED", label: "Cancelled", count: filtered.filter(o => o.deliveryStatus === "CANCELLED").length },
+                        {
+                            value: "READY_FOR_DELIVERY",
+                            label: "Ready",
+                            count: filtered.filter(
+                                (o) => o.deliveryStatus === "READY_FOR_DELIVERY"
+                            ).length,
+                        },
+                        {
+                            value: "DELIVERED",
+                            label: "Delivered",
+                            count: filtered.filter(
+                                (o) => o.deliveryStatus === "DELIVERED"
+                            ).length,
+                        },
+                        {
+                            value: "FAILED",
+                            label: "Failed",
+                            count: filtered.filter(
+                                (o) => o.deliveryStatus === "FAILED"
+                            ).length,
+                        },
+                        {
+                            value: "CANCELLED",
+                            label: "Cancelled",
+                            count: filtered.filter(
+                                (o) => o.deliveryStatus === "CANCELLED"
+                            ).length,
+                        },
                     ],
                 },
             },
@@ -1369,9 +1413,7 @@ class MockServer {
         return { items: this.state.carts[user.id], merged: true };
     }
 
-    private getCatalog(
-        query: URLSearchParams
-    ) {
+    private getCatalog(query: URLSearchParams) {
         const page = Number(query.get("page") || "1");
         const limit = Number(query.get("limit") || "16");
         const categoryId = query.get("categoryId");
@@ -1487,7 +1529,9 @@ class MockServer {
                 }
                 if (segments[3] === "deactivate") {
                     if (id === admin.id) {
-                        throw new Error("You cannot deactivate your own account");
+                        throw new Error(
+                            "You cannot deactivate your own account"
+                        );
                     }
                     const user = this.state.users.find((u) => u.id === id);
                     if (!user) throw new Error("User not found");
@@ -1501,8 +1545,7 @@ class MockServer {
             this.state.users[index] = {
                 ...this.state.users[index],
                 ...payload,
-                password:
-                    payload.password || this.state.users[index].password,
+                password: payload.password || this.state.users[index].password,
             };
             return this.toPublicUser(this.state.users[index]) as T;
         }
@@ -1536,9 +1579,7 @@ class MockServer {
                 "DISTRIBUTOR",
             ]);
             const payload = data as Partial<DemoUser>;
-            const index = this.state.users.findIndex(
-                (u) => u.id === user.id
-            );
+            const index = this.state.users.findIndex((u) => u.id === user.id);
             this.state.users[index] = {
                 ...this.state.users[index],
                 ...payload,
@@ -1615,35 +1656,26 @@ class MockServer {
         }
 
         // Customers summary
-        if (
-            method === "GET" &&
-            path === "/admin/analytics/customers/summary"
-        ) {
+        if (method === "GET" && path === "/admin/analytics/customers/summary") {
             this.ensureAuth(config, ["ADMIN"]);
             return this.getCustomerSummary() as T;
         }
 
         // Admin dashboard
-        if (
-            method === "GET" &&
-            path === "/admin/analytics/dashboard"
-        ) {
+        if (method === "GET" && path === "/admin/analytics/dashboard") {
             this.ensureAuth(config, ["ADMIN"]);
             return this.getAdminDashboard() as T;
         }
 
-        if (
-            method === "POST" &&
-            path === "/admin/analytics/test/create-data"
-        ) {
+        if (method === "POST" && path === "/admin/analytics/test/create-data") {
             this.ensureAuth(config, ["ADMIN"]);
-            return { createdCount: 0, message: "Demo data already loaded." } as T;
+            return {
+                createdCount: 0,
+                message: "Demo data already loaded.",
+            } as T;
         }
 
-        if (
-            method === "GET" &&
-            path === "/admin/analytics/cache/stats"
-        ) {
+        if (method === "GET" && path === "/admin/analytics/cache/stats") {
             this.ensureAuth(config, ["ADMIN"]);
             return {
                 hitRate: 0.92,
@@ -1653,51 +1685,34 @@ class MockServer {
             } as T;
         }
 
-        if (
-            method === "POST" &&
-            path === "/admin/analytics/cache/clear"
-        ) {
+        if (method === "POST" && path === "/admin/analytics/cache/clear") {
             this.ensureAuth(config, ["ADMIN"]);
             return { cleared: true, message: "Analytics cache cleared." } as T;
         }
 
-        if (
-            method === "GET" &&
-            path === "/admin/analytics/production"
-        ) {
+        if (method === "GET" && path === "/admin/analytics/production") {
             this.ensureAuth(config, ["ADMIN"]);
             return this.getProductionAnalytics() as T;
         }
 
-        if (
-            method === "GET" &&
-            path === "/admin/analytics/financials"
-        ) {
+        if (method === "GET" && path === "/admin/analytics/financials") {
             this.ensureAuth(config, ["ADMIN"]);
             return this.getFinancialsReport(query) as T;
         }
 
-        if (
-            method === "GET" &&
-            path === "/admin/production-list/all"
-        ) {
+        if (method === "GET" && path === "/admin/production-list/all") {
             this.ensureAuth(config, ["ADMIN"]);
-            const date = query.get("date") || toDateKey(new Date().toISOString());
+            const date =
+                query.get("date") || toDateKey(new Date().toISOString());
             return this.getProductionList(date) as T;
         }
 
-        if (
-            method === "GET" &&
-            path === "/admin/analytics/orders"
-        ) {
+        if (method === "GET" && path === "/admin/analytics/orders") {
             this.ensureAuth(config, ["ADMIN"]);
             return this.getOrdersResponse(query) as T;
         }
 
-        if (
-            method === "GET" &&
-            path === "/admin/analytics/customers"
-        ) {
+        if (method === "GET" && path === "/admin/analytics/customers") {
             this.ensureAuth(config, ["ADMIN"]);
             const { data, pagination } = this.getEnhancedCustomersData(query);
             return {
@@ -1725,18 +1740,12 @@ class MockServer {
             } as T;
         }
 
-        if (
-            method === "GET" &&
-            path === "/admin/analytics/customers/kpi"
-        ) {
+        if (method === "GET" && path === "/admin/analytics/customers/kpi") {
             this.ensureAuth(config, ["ADMIN"]);
             return this.getCustomerKpiMetrics(query) as T;
         }
 
-        if (
-            method === "GET" &&
-            path === "/admin/analytics/customers/top"
-        ) {
+        if (method === "GET" && path === "/admin/analytics/customers/top") {
             this.ensureAuth(config, ["ADMIN"]);
             const limit = Number(query.get("limit") || "5");
             return this.getTopCustomersData(limit) as T;
@@ -1759,10 +1768,7 @@ class MockServer {
             return this.getEnhancedCustomersData(query) as T;
         }
 
-        if (
-            method === "GET" &&
-            path === "/admin/analytics/customers/at-risk"
-        ) {
+        if (method === "GET" && path === "/admin/analytics/customers/at-risk") {
             this.ensureAuth(config, ["ADMIN"]);
             return { data: [] } as T;
         }
@@ -1839,37 +1845,24 @@ class MockServer {
             return newList as T;
         }
 
-        if (
-            method === "GET" &&
-            path.startsWith("/admin/price-lists/")
-        ) {
+        if (method === "GET" && path.startsWith("/admin/price-lists/")) {
             this.ensureAuth(config, ["ADMIN", "DISTRIBUTOR"]);
             const id = path.split("/")[3];
-            const detail = this.state.priceLists.find(
-                (list) => list.id === id
-            );
+            const detail = this.state.priceLists.find((list) => list.id === id);
             if (!detail) {
                 throw new Error("Price list not found");
             }
             return detail as T;
         }
-        if (
-            method === "GET" &&
-            path.startsWith("/distributor/price-lists/")
-        ) {
+        if (method === "GET" && path.startsWith("/distributor/price-lists/")) {
             this.ensureAuth(config, ["DISTRIBUTOR"]);
             const id = path.split("/")[3];
-            const detail = this.state.priceLists.find(
-                (list) => list.id === id
-            );
+            const detail = this.state.priceLists.find((list) => list.id === id);
             if (!detail) throw new Error("Price list not found");
             return detail as T;
         }
 
-        if (
-            method === "PUT" &&
-            path.startsWith("/admin/price-lists/")
-        ) {
+        if (method === "PUT" && path.startsWith("/admin/price-lists/")) {
             this.ensureAuth(config, ["ADMIN", "DISTRIBUTOR"]);
             const id = path.split("/")[3];
             const index = this.state.priceLists.findIndex(
@@ -1910,14 +1903,13 @@ class MockServer {
                 ...list,
                 isDefault: list.id === id,
             }));
-            const detail = this.state.priceLists.find((list) => list.id === id)!;
+            const detail = this.state.priceLists.find(
+                (list) => list.id === id
+            )!;
             return detail as T;
         }
 
-        if (
-            method === "DELETE" &&
-            path.startsWith("/admin/price-lists/")
-        ) {
+        if (method === "DELETE" && path.startsWith("/admin/price-lists/")) {
             this.ensureAuth(config, ["ADMIN"]);
             const id = path.split("/")[3];
             this.state.priceLists = this.state.priceLists.filter(
@@ -1933,7 +1925,10 @@ class MockServer {
         }
 
         if (method === "GET" && path === "/distributor/clients") {
-            const distributor = this.ensureAuth(config, ["DISTRIBUTOR", "ADMIN"]);
+            const distributor = this.ensureAuth(config, [
+                "DISTRIBUTOR",
+                "ADMIN",
+            ]);
             const page = Number(query.get("page") || "1");
             const limit = Number(query.get("limit") || "10");
             const clients = this.getClientsForDistributor(distributor);
@@ -1950,7 +1945,10 @@ class MockServer {
         }
 
         if (path.startsWith("/distributor/clients/")) {
-            const distributor = this.ensureAuth(config, ["DISTRIBUTOR", "ADMIN"]);
+            const distributor = this.ensureAuth(config, [
+                "DISTRIBUTOR",
+                "ADMIN",
+            ]);
             const segments = path.split("/");
             const clientId = segments[3];
             if (!clientId) {
@@ -2021,10 +2019,7 @@ class MockServer {
             return this.getOrdersResponse(query) as T;
         }
 
-        if (
-            method === "GET" &&
-            path.startsWith("/admin/orders/")
-        ) {
+        if (method === "GET" && path.startsWith("/admin/orders/")) {
             this.ensureAuth(config, ["ADMIN"]);
             const userId = path.split("/")[3];
             const page = Number(query.get("page") || "1");
@@ -2105,10 +2100,7 @@ class MockServer {
             return newOrder as T;
         }
 
-        if (
-            method === "GET" &&
-            path.startsWith("/orders/")
-        ) {
+        if (method === "GET" && path.startsWith("/orders/")) {
             const user = this.ensureAuth(config, [
                 "ADMIN",
                 "CLIENT",
@@ -2118,10 +2110,7 @@ class MockServer {
             const id = path.split("/")[2];
             const order = this.state.orders.find((o) => o.id === id);
             if (!order) throw new Error("Order not found");
-            if (
-                user.role === "CLIENT" &&
-                order.user?.id !== user.id
-            ) {
+            if (user.role === "CLIENT" && order.user?.id !== user.id) {
                 throw new Error("You cannot view this order");
             }
             return order as T;
@@ -2143,10 +2132,7 @@ class MockServer {
             return favorite as T;
         }
 
-        if (
-            method === "DELETE" &&
-            path.startsWith("/favorites/")
-        ) {
+        if (method === "DELETE" && path.startsWith("/favorites/")) {
             const user = this.ensureAuth(config, ["CLIENT"]);
             const productId = path.split("/")[2];
             const entries = this.state.favorites[user.id] ?? [];
@@ -2156,10 +2142,7 @@ class MockServer {
             return {} as T;
         }
 
-        if (
-            method === "GET" &&
-            path.startsWith("/favorites/check/")
-        ) {
+        if (method === "GET" && path.startsWith("/favorites/check/")) {
             const user = this.ensureAuth(config, ["CLIENT"]);
             const productId = path.split("/")[3];
             const isFavorite = (this.state.favorites[user.id] || []).includes(
@@ -2183,16 +2166,10 @@ class MockServer {
 
         if (method === "POST" && path === "/cart/items") {
             const user = this.ensureAuth(config, ["CLIENT"]);
-            return this.addCartItem(
-                user,
-                data as DemoCartItemPayload
-            ) as T;
+            return this.addCartItem(user, data as DemoCartItemPayload) as T;
         }
 
-        if (
-            method === "PUT" &&
-            path.startsWith("/cart/items/")
-        ) {
+        if (method === "PUT" && path.startsWith("/cart/items/")) {
             const user = this.ensureAuth(config, ["CLIENT"]);
             const id = path.split("/")[3];
             return this.updateCartItem(
@@ -2202,10 +2179,7 @@ class MockServer {
             ) as T;
         }
 
-        if (
-            method === "DELETE" &&
-            path.startsWith("/cart/items/")
-        ) {
+        if (method === "DELETE" && path.startsWith("/cart/items/")) {
             const user = this.ensureAuth(config, ["CLIENT"]);
             const id = path.split("/")[3];
             return this.removeCartItem(user, id) as T;
@@ -2229,10 +2203,7 @@ class MockServer {
             return response as T;
         }
 
-        if (
-            method === "GET" &&
-            path === "/admin/products/statistics"
-        ) {
+        if (method === "GET" && path === "/admin/products/statistics") {
             this.ensureAuth(config, ["ADMIN"]);
             return this.getProductStatistics() as T;
         }
@@ -2305,34 +2276,28 @@ class MockServer {
             return list as T;
         }
 
-        if (
-            method === "GET" &&
-            path === "/distributor/daily-client-summary"
-        ) {
+        if (method === "GET" && path === "/distributor/daily-client-summary") {
             this.ensureAuth(config, ["DISTRIBUTOR", "ADMIN"]);
-            const date = query.get("date") || toDateKey(new Date().toISOString());
+            const date =
+                query.get("date") || toDateKey(new Date().toISOString());
             return this.getDistributorDailyClientSummary(date) as T;
         }
 
-        if (
-            method === "GET" &&
-            path === "/distributor/daily-product-summary"
-        ) {
+        if (method === "GET" && path === "/distributor/daily-product-summary") {
             this.ensureAuth(config, ["DISTRIBUTOR", "ADMIN"]);
-            const date = query.get("date") || toDateKey(new Date().toISOString());
+            const date =
+                query.get("date") || toDateKey(new Date().toISOString());
             return this.getDistributorDailyProductSummary(date) as T;
         }
 
         if (method === "GET" && path === "/distributor/daily-orders") {
             this.ensureAuth(config, ["DISTRIBUTOR", "ADMIN"]);
-            const date = query.get("date") || toDateKey(new Date().toISOString());
+            const date =
+                query.get("date") || toDateKey(new Date().toISOString());
             return this.getDistributorDailyOrders(date) as T;
         }
 
-        if (
-            method === "GET" &&
-            path.startsWith("/distributor/orders/")
-        ) {
+        if (method === "GET" && path.startsWith("/distributor/orders/")) {
             this.ensureAuth(config, ["DISTRIBUTOR", "ADMIN"]);
             const id = path.split("/")[3];
             const order = this.state.orders.find((o) => o.id === id);
@@ -2342,21 +2307,24 @@ class MockServer {
 
         if (method === "GET" && path === "/chef/production-list") {
             const chef = this.ensureAuth(config, ["CHEF"]);
-            const date = query.get("date") || toDateKey(new Date().toISOString());
+            const date =
+                query.get("date") || toDateKey(new Date().toISOString());
             const list = this.getProductionList(date).filter((item) =>
-                chef.productGroup ? item.productGroup === chef.productGroup : true
+                chef.productGroup
+                    ? item.productGroup === chef.productGroup
+                    : true
             );
             return list as T;
         }
 
-        if (
-            method === "GET" &&
-            path === "/chef/production-list-by-group"
-        ) {
+        if (method === "GET" && path === "/chef/production-list-by-group") {
             const chef = this.ensureAuth(config, ["CHEF"]);
-            const date = query.get("date") || toDateKey(new Date().toISOString());
+            const date =
+                query.get("date") || toDateKey(new Date().toISOString());
             const list = this.getProductionList(date).filter((item) =>
-                chef.productGroup ? item.productGroup === chef.productGroup : true
+                chef.productGroup
+                    ? item.productGroup === chef.productGroup
+                    : true
             );
             return {
                 productionList: list,
@@ -2465,10 +2433,7 @@ class MockServer {
             return { orders: this.state.orders } as T;
         }
 
-        if (
-            method === "GET" &&
-            path.startsWith("/driver/orders/")
-        ) {
+        if (method === "GET" && path.startsWith("/driver/orders/")) {
             const driver = this.ensureAuth(config, ["DRIVER"]);
             const id = path.split("/")[3];
             const order = this.state.orders.find((o) => o.id === id);

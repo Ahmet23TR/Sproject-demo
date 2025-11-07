@@ -128,8 +128,18 @@ export interface DistributorClientDetail {
     priceListId?: string | null;
     createdAt?: string;
     // Relations
-    priceList?: { id: string; name: string; type?: "WHOLESALE" | "RETAIL"; distributorId?: string | null } | null;
-    assignedDistributor?: { id: string; name: string; surname: string; email: string } | null;
+    priceList?: {
+        id: string;
+        name: string;
+        type?: "WHOLESALE" | "RETAIL";
+        distributorId?: string | null;
+    } | null;
+    assignedDistributor?: {
+        id: string;
+        name: string;
+        surname: string;
+        email: string;
+    } | null;
     // Stats
     orderCount?: number;
     totalOrderAmount?: number; // only DELIVERED and PARTIALLY_DELIVERED
@@ -225,7 +235,7 @@ export interface PriceListSummary {
     id: string;
     name: string;
     isDefault: boolean;
-    type?: 'WHOLESALE' | 'RETAIL';
+    type?: "WHOLESALE" | "RETAIL";
     distributorId?: string | null;
     createdAt?: string;
     updatedAt?: string;
@@ -333,7 +343,8 @@ export interface AdminAnalyticsOrdersQuery {
 
 export type AdminAnalyticsOrdersItem = Order;
 
-export type AdminAnalyticsOrdersResponse = PaginatedResponse<AdminAnalyticsOrdersItem>;
+export type AdminAnalyticsOrdersResponse =
+    PaginatedResponse<AdminAnalyticsOrdersItem>;
 
 export interface AdminAnalyticsCustomersQuery {
     page?: number;
@@ -351,7 +362,8 @@ export interface AdminAnalyticsCustomerItem {
     user: { id: string; email: string; name: string; surname: string };
 }
 
-export type AdminAnalyticsCustomersResponse = PaginatedResponse<AdminAnalyticsCustomerItem>;
+export type AdminAnalyticsCustomersResponse =
+    PaginatedResponse<AdminAnalyticsCustomerItem>;
 
 export interface AdminAnalyticsProductionQuery {
     startDate?: string;

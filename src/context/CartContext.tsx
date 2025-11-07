@@ -15,7 +15,10 @@ import {
     removeCartItem,
     mergeCart,
 } from "../services/cartService";
-import { fetchProductsByIds, fetchClientProductsByIds } from "../services/catalogService";
+import {
+    fetchProductsByIds,
+    fetchClientProductsByIds,
+} from "../services/catalogService";
 import { calculateProductPrice } from "../utils/price";
 
 export interface CartItem {
@@ -64,7 +67,9 @@ type CartItemWithSnapshots = CartItem & {
     multiplier?: number;
 };
 
-type ProductOptionGroupList = CartItem["product"] extends { optionGroups?: infer G }
+type ProductOptionGroupList = CartItem["product"] extends {
+    optionGroups?: infer G;
+}
     ? G
     : never;
 
@@ -122,7 +127,9 @@ interface CartContextType {
             unit: string;
         }>;
     } | void>;
-    loadActiveItemsToCart: (activeItems: RepeatableOrderItem[]) => Promise<void>;
+    loadActiveItemsToCart: (
+        activeItems: RepeatableOrderItem[]
+    ) => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -155,10 +162,7 @@ const normalizeOrderItemsForCart = (
     return items.reduce<RepeatableOrderItem[]>((acc, item) => {
         const productId = resolveOrderItemProductId(item);
         if (!productId) {
-            console.warn(
-                "[Cart] Skipping order item without product ID",
-                item
-            );
+            console.warn("[Cart] Skipping order item without product ID", item);
             return acc;
         }
 
@@ -180,7 +184,7 @@ function findCartItemId(
         (i) =>
             i.productId === productId &&
             JSON.stringify(i.selectedOptionItemIds) ===
-            JSON.stringify(selectedOptionItemIds)
+                JSON.stringify(selectedOptionItemIds)
     )?.id;
 }
 
@@ -246,9 +250,13 @@ function normalizeCartItem(item: unknown): CartItemWithSnapshots {
     let normalizedProduct: CartItemWithSnapshots["product"];
 
     if (baseProduct && typeof baseProduct === "object") {
-        const productDetails = baseProduct as NonNullable<CartItemWithSnapshots["product"]>;
+        const productDetails = baseProduct as NonNullable<
+            CartItemWithSnapshots["product"]
+        >;
         const rawOptionGroups =
-            "optionGroups" in productDetails ? (productDetails as { optionGroups?: unknown }).optionGroups : undefined;
+            "optionGroups" in productDetails
+                ? (productDetails as { optionGroups?: unknown }).optionGroups
+                : undefined;
         const optionGroups = Array.isArray(rawOptionGroups)
             ? (rawOptionGroups as ProductOptionGroupList)
             : undefined;
@@ -272,39 +280,48 @@ function normalizeCartItems(data: unknown): CartItemWithSnapshots[] {
 }
 
 // Cart item için multiplier ve fiyat hesaplama yardımcı fonksiyonu
-async function calculateCartItemDetails(item: CartItemPayload, token?: string): Promise<Partial<CartItem>> {
+async function calculateCartItemDetails(
+    item: CartItemPayload,
+    token?: string
+): Promise<Partial<CartItem>> {
     try {
         const products = token
             ? await fetchClientProductsByIds([item.productId], token)
             : await fetchProductsByIds([item.productId]);
 
-        const product = products.find(p => p.id === item.productId);
+        const product = products.find((p) => p.id === item.productId);
 
         if (!product) {
             return {};
         }
 
         // Seçilen opsiyonları group name'e göre organize et
-        const groupNameSelected: { [groupName: string]: string | string[] } = {};
+        const groupNameSelected: { [groupName: string]: string | string[] } =
+            {};
         let multiplier = 1;
 
         if (item.selectedOptionItemIds.length > 0) {
             product.optionGroups?.forEach((group) => {
-                const selectedItems = group.items.filter(groupItem =>
+                const selectedItems = group.items.filter((groupItem) =>
                     item.selectedOptionItemIds.includes(groupItem.id)
                 );
 
                 if (selectedItems.length > 0) {
-                    const selectedNames = selectedItems.map(groupItem => groupItem.name);
-                    groupNameSelected[group.name] = group.allowMultiple ? selectedNames : selectedNames[0];
+                    const selectedNames = selectedItems.map(
+                        (groupItem) => groupItem.name
+                    );
+                    groupNameSelected[group.name] = group.allowMultiple
+                        ? selectedNames
+                        : selectedNames[0];
 
                     // Multiplier hesaplama - backend'den gelen multiplier değerini kullan
-                    selectedItems.forEach(selectedItem => {
+                    selectedItems.forEach((selectedItem) => {
                         if (selectedItem.multiplier !== undefined) {
                             // Backend'den gelen multiplier string olabilir, number'a çevir
-                            const itemMultiplier = typeof selectedItem.multiplier === 'string'
-                                ? parseFloat(selectedItem.multiplier)
-                                : selectedItem.multiplier;
+                            const itemMultiplier =
+                                typeof selectedItem.multiplier === "string"
+                                    ? parseFloat(selectedItem.multiplier)
+                                    : selectedItem.multiplier;
 
                             if (itemMultiplier > multiplier) {
                                 multiplier = itemMultiplier;
@@ -351,7 +368,7 @@ async function calculateCartItemDetails(item: CartItemPayload, token?: string): 
             product: normalizedProduct,
         };
     } catch (error) {
-        console.error('Error calculating cart item details:', error);
+        console.error("Error calculating cart item details:", error);
         return {};
     }
 }
@@ -363,36 +380,47 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const [error, setError] = useState<string | null>(null);
 
     // Mevcut cart item'ları için eksik multiplier bilgilerini hesapla
-    const updateCartItemsWithMultiplier = useCallback(async (cartItems: CartItem[]) => {
-        if (cartItems.length === 0) return cartItems;
+    const updateCartItemsWithMultiplier = useCallback(
+        async (cartItems: CartItem[]) => {
+            if (cartItems.length === 0) return cartItems;
 
-        const updatedItems = await Promise.all(
-            cartItems.map(async (cartItem) => {
-                // Eğer multiplier zaten varsa, dokunma
-                if (cartItem.multiplier !== undefined) {
-                    return cartItem;
-                }
+            const updatedItems = await Promise.all(
+                cartItems.map(async (cartItem) => {
+                    // Eğer multiplier zaten varsa, dokunma
+                    if (cartItem.multiplier !== undefined) {
+                        return cartItem;
+                    }
 
-                // Multiplier yoksa hesapla
-                const itemDetails = await calculateCartItemDetails({
-                    productId: cartItem.productId,
-                    quantity: cartItem.quantity,
-                    selectedOptionItemIds: cartItem.selectedOptionItemIds
-                }, token || undefined);
+                    // Multiplier yoksa hesapla
+                    const itemDetails = await calculateCartItemDetails(
+                        {
+                            productId: cartItem.productId,
+                            quantity: cartItem.quantity,
+                            selectedOptionItemIds:
+                                cartItem.selectedOptionItemIds,
+                        },
+                        token || undefined
+                    );
 
-                return {
-                    ...cartItem,
-                    ...itemDetails,
-                    // also set retail snapshots for display consistency
-                    retailUnitPrice: itemDetails.unitPrice,
-                    retailTotalPrice: itemDetails.unitPrice ? itemDetails.unitPrice * cartItem.quantity : cartItem.totalPrice,
-                    totalPrice: itemDetails.unitPrice ? itemDetails.unitPrice * cartItem.quantity : cartItem.totalPrice
-                };
-            })
-        );
+                    return {
+                        ...cartItem,
+                        ...itemDetails,
+                        // also set retail snapshots for display consistency
+                        retailUnitPrice: itemDetails.unitPrice,
+                        retailTotalPrice: itemDetails.unitPrice
+                            ? itemDetails.unitPrice * cartItem.quantity
+                            : cartItem.totalPrice,
+                        totalPrice: itemDetails.unitPrice
+                            ? itemDetails.unitPrice * cartItem.quantity
+                            : cartItem.totalPrice,
+                    };
+                })
+            );
 
-        return updatedItems;
-    }, [token]);
+            return updatedItems;
+        },
+        [token]
+    );
 
     // Sepeti uygun kaynaktan yükle
     const loadCart = useCallback(async () => {
@@ -400,7 +428,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setError(null);
         try {
             // Admin kullanıcısı için cart yükleme işlemini atla
-            if (user?.role === 'ADMIN') {
+            if (user?.role === "ADMIN") {
                 setCart([]);
                 setLoading(false);
                 return;
@@ -412,56 +440,81 @@ export function CartProvider({ children }: { children: ReactNode }) {
                     const data = await getCart(token);
                     // Backend'den gelen cart item'ları - client pricing ile hesaplanmış
                     const cartItemsWithMultiplier = normalizeCartItems(data);
-                    const updatedCartItems = cartItemsWithMultiplier.map((item) => {
-                        // Backend artık client pricing ile hesaplanmış fiyatları döndürüyor
-                        // unitPrice ve totalPrice zaten doğru değerler
-                        return {
-                            ...item,
-                            unitPrice: item.unitPrice,
-                            totalPrice: item.totalPrice,
-                            retailUnitPrice: item.retailUnitPrice ?? item.unitPrice,
-                            retailTotalPrice: item.retailTotalPrice ?? item.totalPrice,
-                            wholesaleUnitPrice: item.wholesaleUnitPrice,
-                            wholesaleTotalPrice: item.wholesaleTotalPrice,
-                            multiplier: item.multiplier || 1
-                        };
-                    });
+                    const updatedCartItems = cartItemsWithMultiplier.map(
+                        (item) => {
+                            // Backend artık client pricing ile hesaplanmış fiyatları döndürüyor
+                            // unitPrice ve totalPrice zaten doğru değerler
+                            return {
+                                ...item,
+                                unitPrice: item.unitPrice,
+                                totalPrice: item.totalPrice,
+                                retailUnitPrice:
+                                    item.retailUnitPrice ?? item.unitPrice,
+                                retailTotalPrice:
+                                    item.retailTotalPrice ?? item.totalPrice,
+                                wholesaleUnitPrice: item.wholesaleUnitPrice,
+                                wholesaleTotalPrice: item.wholesaleTotalPrice,
+                                multiplier: item.multiplier || 1,
+                            };
+                        }
+                    );
 
                     setCart((prevCart) => {
-                        const newCart = preserveCartOrder(prevCart, updatedCartItems);
+                        const newCart = preserveCartOrder(
+                            prevCart,
+                            updatedCartItems
+                        );
                         return newCart;
                     });
                 } catch {
-                    console.warn('Backend cart API not available, using localStorage fallback');
+                    console.warn(
+                        "Backend cart API not available, using localStorage fallback"
+                    );
                     // localStorage'dan çek ve multiplier bilgilerini güncelle
                     const local = localStorage.getItem("cart");
-                    const cartItems = normalizeCartItems(local ? JSON.parse(local) : []);
-                    const updatedCartItems = await updateCartItemsWithMultiplier(cartItems);
+                    const cartItems = normalizeCartItems(
+                        local ? JSON.parse(local) : []
+                    );
+                    const updatedCartItems =
+                        await updateCartItemsWithMultiplier(cartItems);
                     setCart(updatedCartItems);
                     // Güncellenmiş bilgileri localStorage'a kaydet
                     if (updatedCartItems.length > 0) {
-                        localStorage.setItem("cart", JSON.stringify(updatedCartItems));
+                        localStorage.setItem(
+                            "cart",
+                            JSON.stringify(updatedCartItems)
+                        );
                     }
                 }
             } else {
                 // localStorage'dan çek ve multiplier bilgilerini güncelle
                 const local = localStorage.getItem("cart");
-                const cartItems = normalizeCartItems(local ? JSON.parse(local) : []);
-                const updatedCartItems = await updateCartItemsWithMultiplier(cartItems);
+                const cartItems = normalizeCartItems(
+                    local ? JSON.parse(local) : []
+                );
+                const updatedCartItems = await updateCartItemsWithMultiplier(
+                    cartItems
+                );
                 setCart(updatedCartItems);
                 // Güncellenmiş bilgileri localStorage'a kaydet
                 if (updatedCartItems.length > 0) {
-                    localStorage.setItem("cart", JSON.stringify(updatedCartItems));
+                    localStorage.setItem(
+                        "cart",
+                        JSON.stringify(updatedCartItems)
+                    );
                 }
             }
         } catch (err: unknown) {
             // Cart boş olduğunda hata gösterme, sadece gerçek hatalarda göster
-            const errorMessage = err instanceof Error ? err.message : "Cart could not be loaded";
+            const errorMessage =
+                err instanceof Error ? err.message : "Cart could not be loaded";
 
             // Sadece gerçek hatalarda notification göster
-            if (!errorMessage.toLowerCase().includes('empty') &&
-                !errorMessage.toLowerCase().includes('404') &&
-                !errorMessage.toLowerCase().includes('not found')) {
+            if (
+                !errorMessage.toLowerCase().includes("empty") &&
+                !errorMessage.toLowerCase().includes("404") &&
+                !errorMessage.toLowerCase().includes("not found")
+            ) {
                 setError(errorMessage);
             }
         } finally {
@@ -479,8 +532,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setCart(items);
         localStorage.setItem("cart", JSON.stringify(items));
     };
-
-
 
     // Sepeti refetch etme fonksiyonu (login sonrası merge için dışarıdan da çağrılabilir)
     const refetchCart = useCallback(loadCart, [loadCart]);
@@ -518,16 +569,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
                                       quantity: newQuantity,
                                       ...itemDetails,
                                       retailUnitPrice: itemDetails.unitPrice,
-                                      retailTotalPrice:
-                                          itemDetails.unitPrice
-                                              ? itemDetails.unitPrice *
-                                                newQuantity
-                                              : itemDetails.totalPrice,
-                                      totalPrice:
-                                          itemDetails.unitPrice
-                                              ? itemDetails.unitPrice *
-                                                newQuantity
-                                              : itemDetails.totalPrice,
+                                      retailTotalPrice: itemDetails.unitPrice
+                                          ? itemDetails.unitPrice * newQuantity
+                                          : itemDetails.totalPrice,
+                                      totalPrice: itemDetails.unitPrice
+                                          ? itemDetails.unitPrice * newQuantity
+                                          : itemDetails.totalPrice,
                                   }
                                 : i
                         );
@@ -566,9 +613,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
                     await applyLocalAdd("backend-fallback");
                 }
             } else {
-                await applyLocalAdd(
-                    user && token ? "demo-mode" : "guest-cart"
-                );
+                await applyLocalAdd(user && token ? "demo-mode" : "guest-cart");
                 // Demo/guest modlarında ürün detayını manual olarak bağla
                 if (user && token) {
                     // already handled via applyLocalAdd
@@ -577,33 +622,56 @@ export function CartProvider({ children }: { children: ReactNode }) {
                         const products = await fetchProductsByIds([
                             item.productId,
                         ]);
-                        const foundProduct = products.find((p) => p.id === item.productId);
+                        const foundProduct = products.find(
+                            (p) => p.id === item.productId
+                        );
                         setCart((prev) =>
                             prev.map((cartItem) =>
                                 cartItem.productId === item.productId
                                     ? {
                                           ...cartItem,
-                                          product: cartItem.product || (foundProduct ? {
-                                              id: foundProduct.id,
-                                              name: foundProduct.name,
-                                              description: foundProduct.description,
-                                              imageUrl: foundProduct.imageUrl,
-                                              isActive: foundProduct.isActive,
-                                              unit: foundProduct.unit,
-                                              productGroup: foundProduct.productGroup,
-                                              optionGroups: foundProduct.optionGroups?.map(og => ({
-                                                  id: og.id,
-                                                  name: og.name,
-                                                  isRequired: og.isRequired,
-                                                  allowMultiple: og.allowMultiple,
-                                                  items: og.items.map(item => ({
-                                                      id: item.id,
-                                                      name: item.name,
-                                                      price: item.price ?? 0,
-                                                      multiplier: item.multiplier ?? 1,
-                                                  }))
-                                              }))
-                                          } : undefined),
+                                          product:
+                                              cartItem.product ||
+                                              (foundProduct
+                                                  ? {
+                                                        id: foundProduct.id,
+                                                        name: foundProduct.name,
+                                                        description:
+                                                            foundProduct.description,
+                                                        imageUrl:
+                                                            foundProduct.imageUrl,
+                                                        isActive:
+                                                            foundProduct.isActive,
+                                                        unit: foundProduct.unit,
+                                                        productGroup:
+                                                            foundProduct.productGroup,
+                                                        optionGroups:
+                                                            foundProduct.optionGroups?.map(
+                                                                (og) => ({
+                                                                    id: og.id,
+                                                                    name: og.name,
+                                                                    isRequired:
+                                                                        og.isRequired,
+                                                                    allowMultiple:
+                                                                        og.allowMultiple,
+                                                                    items: og.items.map(
+                                                                        (
+                                                                            item
+                                                                        ) => ({
+                                                                            id: item.id,
+                                                                            name: item.name,
+                                                                            price:
+                                                                                item.price ??
+                                                                                0,
+                                                                            multiplier:
+                                                                                item.multiplier ??
+                                                                                1,
+                                                                        })
+                                                                    ),
+                                                                })
+                                                            ),
+                                                    }
+                                                  : undefined),
                                       }
                                     : cartItem
                             )
@@ -623,7 +691,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         } catch (err: unknown) {
             console.error("[Cart] addToCart error", err);
             setError(
-                err instanceof Error ? err.message : "Product could not be added to cart"
+                err instanceof Error
+                    ? err.message
+                    : "Product could not be added to cart"
             );
         } finally {
             setLoading(false);
@@ -660,7 +730,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
                             !(
                                 i.productId === productId &&
                                 JSON.stringify(i.selectedOptionItemIds) ===
-                                JSON.stringify(selectedOptionItemIds)
+                                    JSON.stringify(selectedOptionItemIds)
                             )
                     );
                     saveCartToLocal(newCart);
@@ -669,7 +739,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
             }
         } catch (err: unknown) {
             setError(
-                err instanceof Error ? err.message : "Product could not be removed from cart"
+                err instanceof Error
+                    ? err.message
+                    : "Product could not be removed from cart"
             );
         } finally {
             setLoading(false);
@@ -703,7 +775,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 setCart((prev) => {
                     const newCart = prev.map((i) =>
                         i.productId === productId &&
-                            JSON.stringify(i.selectedOptionItemIds) ===
+                        JSON.stringify(i.selectedOptionItemIds) ===
                             JSON.stringify(selectedOptionItemIds)
                             ? { ...i, quantity }
                             : i
@@ -742,9 +814,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     };
 
     // Deaktive ürünleri kontrol et ve ayır
-    const checkInactiveProducts = async (
-        orderItems: RepeatableOrderItem[]
-    ) => {
+    const checkInactiveProducts = async (orderItems: RepeatableOrderItem[]) => {
         if (orderItems.length === 0) {
             return { activeItems: [], inactiveItems: [] };
         }
@@ -839,8 +909,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
             const normalizedItems = normalizeOrderItemsForCart(orderData.items);
 
             // Deaktive ürünleri kontrol et
-            const { activeItems, inactiveItems } =
-                await checkInactiveProducts(normalizedItems);
+            const { activeItems, inactiveItems } = await checkInactiveProducts(
+                normalizedItems
+            );
             const hasActiveItems = activeItems.length > 0;
             if (!hasActiveItems) {
                 console.warn(
@@ -854,16 +925,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
             const cartItemsWithDetails = await Promise.all(
                 activeItems.map(async (item) => {
                     // selectedOptions'dan selectedOptionItemIds'i çıkar
-                    const selectedOptionItemIds = item.selectedOptions?.map(
-                        (option) => option.optionItem.id
-                    ) || [];
+                    const selectedOptionItemIds =
+                        item.selectedOptions?.map(
+                            (option) => option.optionItem.id
+                        ) || [];
 
                     // Fiyat hesaplaması için item details'i al
-                    const itemDetails = await calculateCartItemDetails({
-                        productId: item.productId,
-                        quantity: item.quantity,
-                        selectedOptionItemIds,
-                    }, token || undefined);
+                    const itemDetails = await calculateCartItemDetails(
+                        {
+                            productId: item.productId,
+                            quantity: item.quantity,
+                            selectedOptionItemIds,
+                        },
+                        token || undefined
+                    );
 
                     return {
                         productId: item.productId,
@@ -882,11 +957,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
             if (user && token) {
                 try {
                     // Backend'e sadece temel bilgileri gönder
-                    const simpleCartItems = cartItemsWithDetails.map(item => ({
-                        productId: item.productId,
-                        quantity: item.quantity,
-                        selectedOptionItemIds: item.selectedOptionItemIds,
-                    }));
+                    const simpleCartItems = cartItemsWithDetails.map(
+                        (item) => ({
+                            productId: item.productId,
+                            quantity: item.quantity,
+                            selectedOptionItemIds: item.selectedOptionItemIds,
+                        })
+                    );
 
                     await mergeCart(simpleCartItems, token);
                     // Backend'den güncel sepeti çek
@@ -930,16 +1007,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
             const cartItemsWithDetails = await Promise.all(
                 activeItems.map(async (item) => {
                     // selectedOptions'dan selectedOptionItemIds'i çıkar
-                    const selectedOptionItemIds = item.selectedOptions?.map(
-                        (option) => option.optionItem.id
-                    ) || [];
+                    const selectedOptionItemIds =
+                        item.selectedOptions?.map(
+                            (option) => option.optionItem.id
+                        ) || [];
 
                     // Fiyat hesaplaması için item details'i al
-                    const itemDetails = await calculateCartItemDetails({
-                        productId: item.productId,
-                        quantity: item.quantity,
-                        selectedOptionItemIds,
-                    }, token || undefined);
+                    const itemDetails = await calculateCartItemDetails(
+                        {
+                            productId: item.productId,
+                            quantity: item.quantity,
+                            selectedOptionItemIds,
+                        },
+                        token || undefined
+                    );
 
                     return {
                         productId: item.productId,
@@ -958,11 +1039,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
             if (user && token) {
                 try {
                     // Backend'e sadece temel bilgileri gönder
-                    const simpleCartItems = cartItemsWithDetails.map(item => ({
-                        productId: item.productId,
-                        quantity: item.quantity,
-                        selectedOptionItemIds: item.selectedOptionItemIds,
-                    }));
+                    const simpleCartItems = cartItemsWithDetails.map(
+                        (item) => ({
+                            productId: item.productId,
+                            quantity: item.quantity,
+                            selectedOptionItemIds: item.selectedOptionItemIds,
+                        })
+                    );
 
                     await mergeCart(simpleCartItems, token);
                     // Backend'den güncel sepeti çek
