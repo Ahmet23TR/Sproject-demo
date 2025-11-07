@@ -1,3 +1,5 @@
+import { DEMO_MODE } from "@/config/demo";
+
 const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/api$/, "") || "";
 
@@ -16,8 +18,10 @@ export function getImageUrl(url: string | null | undefined): string {
 
     // Handle relative URLs - ensure proper concatenation
     if (url.startsWith("/")) {
+        if (DEMO_MODE) {
+            return url;
+        }
         return `${API_BASE}${url}`;
-    } else {
-        return `${API_BASE}/${url}`;
     }
+    return `${API_BASE}/${url}`;
 }

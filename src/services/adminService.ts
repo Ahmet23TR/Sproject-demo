@@ -488,7 +488,20 @@ export const exportOrdersDirect = async (
     request: ExportRequest,
     token: string
 ): Promise<unknown> => {
-    // Use axios directly for file download to handle blob responses properly
+    if (!apiClient["client"]) {
+        return await apiClient.post(
+            `${API_BASE_URL}/admin/analytics/orders/export`,
+            request,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+                responseType: "blob",
+            }
+        );
+    }
+
     const response = await axios.post(
         `${API_BASE_URL}/admin/analytics/orders/export`,
         request,
@@ -497,7 +510,7 @@ export const exportOrdersDirect = async (
                 Authorization: `Bearer ${token}`,
                 "Content-Type": "application/json",
             },
-            responseType: "blob", // This is important for file downloads
+            responseType: "blob",
         }
     );
     return response.data;

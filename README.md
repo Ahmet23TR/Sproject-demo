@@ -12,6 +12,23 @@ Multi-role catering management UI for Deras (Admin, Client, Chef, Driver, Distri
   - Create `.env.local` in the project root (see Environment Variables)
   - Run `npm run dev` and open `http://localhost:3000`
 
+### Demo Mode (backend-free)
+
+The repository ships with a full-featured mock backend so you can explore every role without connecting to the live API. Mock mode is **enabled by default** (`NEXT_PUBLIC_USE_MOCK_DATA` defaults to `true`). Generated demo JWTs keep AuthContext behaviour unchanged.
+
+| Role          | Email                        | Password |
+|---------------|------------------------------|----------|
+| Admin         | `admin@sproject.demo`        | `demo123`|
+| Client (Palm) | `lina@palmbistro.demo`       | `demo123`|
+| Client (Sunrise) | `omar@sunrisecatering.demo` | `demo123`|
+| Chef (Sweets) | `chef.selim@sproject.demo`   | `demo123`|
+| Driver        | `driver.yusuf@sproject.demo` | `demo123`|
+| Distributor   | `nadia@coastaldist.demo`     | `demo123`|
+
+All dashboards (admin, chef, driver, distributor, client) are hydrated with rich fake data: production queues, driver pools, analytics, pricing, cart/favorites, etc.
+
+To reconnect to the real backend later, set `NEXT_PUBLIC_USE_MOCK_DATA=false` and provide `NEXT_PUBLIC_API_BASE_URL` pointing to your API.
+
 ## Tech Stack
 
 - Next.js 15 (App Router)
@@ -26,6 +43,7 @@ Create `.env.local` in the root with:
 
 ```
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8080/api
+NEXT_PUBLIC_USE_MOCK_DATA=true
 NEXT_TELEMETRY_DISABLED=1
 
 # Optional development/build optimizations
@@ -33,7 +51,8 @@ NODE_OPTIONS=--max-old-space-size=4096
 WATCHPACK_POLLING=false
 ```
 
-- `NEXT_PUBLIC_API_BASE_URL`: Backend REST API base URL (required)
+- `NEXT_PUBLIC_API_BASE_URL`: Backend REST API base URL (required when mock mode is disabled)
+- `NEXT_PUBLIC_USE_MOCK_DATA`: `true` to run the self-contained mock backend (default), `false` to call the live API
 - `NEXT_TELEMETRY_DISABLED`: Disables Next.js telemetry (optional)
 - `NODE_OPTIONS`, `WATCHPACK_POLLING`: Build/watch optimizations (optional)
 

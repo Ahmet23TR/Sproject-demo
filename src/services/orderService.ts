@@ -436,43 +436,47 @@ export const cancelOrderByAdmin = async (
     try {
         const payload = { notes };
 
-        // Raw axios kullanarak API client'ın normalization'ını bypass ediyoruz
+        if (!apiClient["client"]) {
+            return await apiClient.put<
+                { success: boolean; message: string; order?: Order }
+            >(`${API_BASE_URL}/admin/orders/${orderId}/cancel`, payload, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+        }
+
         const response = await apiClient["client"].put(
             `${API_BASE_URL}/admin/orders/${orderId}/cancel`,
             payload,
             {
                 headers: { Authorization: `Bearer ${token}` },
-                // Response interceptor'ı bypass et
                 transformResponse: [(data) => data],
             }
         );
 
-        // JSON parse et
         const responseData =
             typeof response.data === "string"
                 ? JSON.parse(response.data)
                 : response.data;
 
-        // Backend envelope format'ından veri çıkar
         if (responseData && responseData.success === true) {
             return {
                 success: true,
                 message: responseData.message || "Order cancelled successfully",
                 order: responseData.data,
             };
-        } else if (responseData && responseData.success === false) {
+        }
+        if (responseData && responseData.success === false) {
             return {
                 success: false,
                 message: responseData.message || "Failed to cancel order",
                 order: undefined,
             };
-        } else {
-            return {
-                success: false,
-                message: "Unexpected response format from server",
-                order: undefined,
-            };
         }
+        return {
+            success: false,
+            message: "Unexpected response format from server",
+            order: undefined,
+        };
     } catch (error: unknown) {
         const err = error as { message?: string };
         // API client'dan gelen normalize edilmiş hata

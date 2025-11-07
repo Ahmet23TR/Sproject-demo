@@ -122,6 +122,10 @@ interface CartContextType {
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+const isDemoMode =
+    process.env.NEXT_PUBLIC_USE_MOCK_DATA !== undefined
+        ? process.env.NEXT_PUBLIC_USE_MOCK_DATA !== "false"
+        : true;
 
 function findCartItemId(
     cart: CartItem[],
@@ -270,10 +274,37 @@ async function calculateCartItemDetails(item: CartItemPayload, token?: string): 
         const unitPrice = calculateProductPrice(product, groupNameSelected);
         const totalPrice = unitPrice * item.quantity;
 
+        const normalizedProduct: CartItem["product"] = {
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            imageUrl: product.imageUrl,
+            isActive: product.isActive,
+            unit: product.unit,
+            productGroup: product.productGroup,
+            optionGroups: product.optionGroups?.map((group) => ({
+                id: group.id,
+                name: group.name,
+                isRequired: group.isRequired,
+                allowMultiple: !!group.allowMultiple,
+                items: group.items.map((groupItem) => ({
+                    id: groupItem.id,
+                    name: groupItem.name,
+                    price:
+                        typeof groupItem.priceAdjustment === "number"
+                            ? groupItem.priceAdjustment
+                            : groupItem.price ?? 0,
+                    multiplier:
+                        groupItem.multiplier ?? groupItem.priceAdjustment ?? 1,
+                })),
+            })),
+        };
+
         return {
             unitPrice,
             totalPrice,
-            multiplier
+            multiplier,
+            product: normalizedProduct,
         };
     } catch (error) {
         console.error('Error calculating cart item details:', error);
@@ -418,98 +449,120 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setLoading(true);
         setError(null);
         try {
-            if (user && token) {
-                // Backend sepet API'si henüz hazır değil, şimdilik localStorage kullan
-                try {
-                    // Backend artık client pricing ile hesaplanmış fiyatları döndürüyor
-                    await addCartItem(item, token);
-                    const data = await getCart(token);
-                    setCart((prevCart) => {
-                        const newCart = preserveCartOrder(prevCart, data);
-                        return newCart;
-                    });
-                } catch {
-                    console.warn('Backend cart API not available, using localStorage fallback');
-                    // localStorage mantığı: aynı ürün+opsiyon varsa miktarı artır
-                    const itemDetails = await calculateCartItemDetails(item, token || undefined);
-
-                    setCart((prev) => {
-                        const existing = prev.find(
-                            (i) =>
-                                i.productId === item.productId &&
-                                JSON.stringify(i.selectedOptionItemIds) ===
-                                JSON.stringify(item.selectedOptionItemIds)
-                        );
-                        let newCart;
-                        if (existing) {
-                            // Mevcut item'ın miktarını artır ve fiyatları güncelle
-                            const newQuantity = existing.quantity + item.quantity;
-                            newCart = prev.map((i) =>
-                                i.productId === item.productId &&
-                                    JSON.stringify(i.selectedOptionItemIds) ===
-                                    JSON.stringify(item.selectedOptionItemIds)
-                                    ? {
-                                        ...i,
-                                        quantity: newQuantity,
-                                        ...itemDetails,
-                                        retailUnitPrice: itemDetails.unitPrice,
-                                        retailTotalPrice: itemDetails.unitPrice ? itemDetails.unitPrice * newQuantity : undefined,
-                                        totalPrice: itemDetails.unitPrice ? itemDetails.unitPrice * newQuantity : undefined
-                                    }
-                                    : i
-                            );
-                        } else {
-                            // Yeni item ekle
-                            newCart = [...prev, { ...item, ...itemDetails, retailUnitPrice: itemDetails.unitPrice, retailTotalPrice: itemDetails.unitPrice ? itemDetails.unitPrice * item.quantity : itemDetails.totalPrice }];
-                        }
-                        saveCartToLocal(newCart);
-                        return newCart;
-                    });
-                }
-            } else {
-                // localStorage mantığı: aynı ürün+opsiyon varsa miktarı artır
-                const itemDetails = await calculateCartItemDetails(item, token || undefined);
-
+            const applyLocalAdd = async (reason: string) => {
+                console.log("[Cart] Applying local cart update:", reason, item);
+                const itemDetails = await calculateCartItemDetails(
+                    item,
+                    token || undefined
+                );
                 setCart((prev) => {
                     const existing = prev.find(
                         (i) =>
                             i.productId === item.productId &&
                             JSON.stringify(i.selectedOptionItemIds) ===
-                            JSON.stringify(item.selectedOptionItemIds)
+                                JSON.stringify(item.selectedOptionItemIds)
                     );
-                    let newCart;
+                    let newCart: CartItem[];
                     if (existing) {
-                        // Mevcut item'ın miktarını artır ve fiyatları güncelle
                         const newQuantity = existing.quantity + item.quantity;
-                        const updatedItem = {
-                            ...existing,
-                            quantity: newQuantity,
-                            ...itemDetails,
-                            retailUnitPrice: itemDetails.unitPrice,
-                            retailTotalPrice: itemDetails.unitPrice ? itemDetails.unitPrice * newQuantity : itemDetails.totalPrice,
-                            totalPrice: itemDetails.unitPrice ? itemDetails.unitPrice * newQuantity : itemDetails.totalPrice
-                        };
                         newCart = prev.map((i) =>
                             i.productId === item.productId &&
-                                JSON.stringify(i.selectedOptionItemIds) ===
+                            JSON.stringify(i.selectedOptionItemIds) ===
                                 JSON.stringify(item.selectedOptionItemIds)
-                                ? updatedItem
+                                ? {
+                                      ...i,
+                                      quantity: newQuantity,
+                                      ...itemDetails,
+                                      retailUnitPrice: itemDetails.unitPrice,
+                                      retailTotalPrice:
+                                          itemDetails.unitPrice
+                                              ? itemDetails.unitPrice *
+                                                newQuantity
+                                              : itemDetails.totalPrice,
+                                      totalPrice:
+                                          itemDetails.unitPrice
+                                              ? itemDetails.unitPrice *
+                                                newQuantity
+                                              : itemDetails.totalPrice,
+                                  }
                                 : i
                         );
                     } else {
-                        // Yeni item ekle
-                        newCart = [...prev, { ...item, ...itemDetails, retailUnitPrice: itemDetails.unitPrice, retailTotalPrice: itemDetails.totalPrice }];
+                        newCart = [
+                            ...prev,
+                            {
+                                ...item,
+                                ...itemDetails,
+                                retailUnitPrice: itemDetails.unitPrice,
+                                retailTotalPrice: itemDetails.totalPrice,
+                            },
+                        ];
                     }
                     saveCartToLocal(newCart);
                     return newCart;
                 });
+            };
+
+            if (user && token && !isDemoMode) {
+                let backendSucceeded = false;
+                try {
+                    console.log("[Cart] addToCart via backend", item);
+                    await addCartItem(item, token);
+                    await loadCart();
+                    backendSucceeded = true;
+                    console.log("[Cart] Backend add succeeded");
+                } catch (err) {
+                    console.error(
+                        "[Cart] Backend add failed, falling back to local cart",
+                        err
+                    );
+                }
+
+                if (!backendSucceeded) {
+                    await applyLocalAdd("backend-fallback");
+                }
+            } else {
+                await applyLocalAdd(
+                    user && token ? "demo-mode" : "guest-cart"
+                );
+                // Demo/guest modlarında ürün detayını manual olarak bağla
+                if (user && token) {
+                    // already handled via applyLocalAdd
+                } else {
+                    try {
+                        const products = await fetchProductsByIds([
+                            item.productId,
+                        ]);
+                        setCart((prev) =>
+                            prev.map((cartItem) =>
+                                cartItem.productId === item.productId
+                                    ? {
+                                          ...cartItem,
+                                          product:
+                                              cartItem.product ||
+                                              products.find(
+                                                  (p) =>
+                                                      p.id === item.productId
+                                              ) ||
+                                              null,
+                                      }
+                                    : cartItem
+                            )
+                        );
+                    } catch (err) {
+                        console.error(
+                            "[Cart] Unable to hydrate product details",
+                            err
+                        );
+                    }
+                }
             }
 
-            // Başarılı ekleme sonrası callback'i çağır
             if (onSuccess) {
                 onSuccess(item);
             }
         } catch (err: unknown) {
+            console.error("[Cart] addToCart error", err);
             setError(
                 err instanceof Error ? err.message : "Product could not be added to cart"
             );
@@ -679,13 +732,38 @@ export function CartProvider({ children }: { children: ReactNode }) {
     };
 
     // Geçmiş siparişi sepete yükle (deaktive ürün kontrolü ile)
-    const loadCartFromOrder = async (order: unknown) => {
-        if (!order || typeof order !== "object" || !("items" in order)) return;
+    const loadCartFromOrder = async (
+        order: unknown
+    ): Promise<
+        | {
+              activeItems: Array<{
+                  productId: string;
+                  quantity: number;
+                  selectedOptions?: Array<{
+                      optionItem: {
+                          id: string;
+                      };
+                  }>;
+              }>;
+              inactiveItems: Array<{
+                  id: string;
+                  name: string;
+                  quantity: number;
+                  unit: string;
+              }>;
+          }
+        | undefined
+    > => {
+        if (!order || typeof order !== "object" || !("items" in order)) {
+            console.warn("[Cart] loadCartFromOrder called with invalid order");
+            return;
+        }
 
         setLoading(true);
         setError(null);
 
         try {
+            console.log("[Cart] loadCartFromOrder start", order);
             const orderData = order as {
                 items: Array<{
                     productId: string;
@@ -699,10 +777,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
             };
 
             // Deaktive ürünleri kontrol et
-            const { activeItems, inactiveItems } = await checkInactiveProducts(orderData.items);
-
-            // Eğer deaktive ürünler varsa, bunları döndür
-            if (inactiveItems.length > 0) {
+            const { activeItems, inactiveItems } =
+                await checkInactiveProducts(orderData.items);
+            const hasActiveItems = activeItems.length > 0;
+            if (!hasActiveItems) {
+                console.warn(
+                    "[Cart] No active items found while repeating order",
+                    inactiveItems
+                );
                 return { activeItems, inactiveItems };
             }
 
@@ -753,7 +835,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 }
             }
 
-            return { activeItems, inactiveItems: [] };
+            console.log(
+                "[Cart] loadCartFromOrder success",
+                cartItemsWithDetails.length,
+                "items"
+            );
+            return { activeItems, inactiveItems };
         } catch (err: unknown) {
             console.error("Error loading cart from order:", err);
             setError(
@@ -779,6 +866,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setError(null);
 
         try {
+            console.log(
+                "[Cart] loadActiveItemsToCart requested",
+                activeItems.length,
+                "items"
+            );
             const cartItemsWithDetails = await Promise.all(
                 activeItems.map(async (item) => {
                     // selectedOptions'dan selectedOptionItemIds'i çıkar

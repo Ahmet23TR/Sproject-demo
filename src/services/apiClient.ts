@@ -5,6 +5,8 @@ import axios, {
     AxiosError,
 } from "axios";
 import { v4 as uuidv4 } from "uuid";
+import { DEMO_MODE } from "@/config/demo";
+import { mockServer } from "@/mocks/mockServer";
 
 // Idempotency key için uuid kütüphanesi eklenmeli
 // npm install uuid @types/uuid
@@ -14,23 +16,28 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 // Idempotency key storage
 const idempotencyKeys = new Set<string>();
 
+type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
 export class ApiClient {
-    private client: AxiosInstance;
+    private client: AxiosInstance | null = null;
+    private readonly useMockData: boolean = DEMO_MODE;
 
     constructor() {
-        this.client = axios.create({
-            baseURL: API_BASE_URL,
-            timeout: 30000, // 30 seconds
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
-
-        this.setupInterceptors();
+        if (!this.useMockData) {
+            this.client = axios.create({
+                baseURL: API_BASE_URL,
+                timeout: 30000, // 30 seconds
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+            this.setupInterceptors();
+        }
     }
 
     private setupInterceptors() {
         // Request interceptor
+        if (!this.client) return;
         this.client.interceptors.request.use(
             (config) => {
                 // Add auth token if available
@@ -268,7 +275,10 @@ export class ApiClient {
         url: string,
         config?: AxiosRequestConfig
     ): Promise<T> {
-        const response = await this.client.get<T>(url, config);
+        if (this.useMockData) {
+            return this.requestMock<T>("GET", url, config);
+        }
+        const response = await this.client!.get<T>(url, config);
         return response.data as unknown as T;
     }
 
@@ -277,7 +287,10 @@ export class ApiClient {
         data?: unknown,
         config?: AxiosRequestConfig
     ): Promise<T> {
-        const response = await this.client.post<T>(url, data, config);
+        if (this.useMockData) {
+            return this.requestMock<T>("POST", url, config, data);
+        }
+        const response = await this.client!.post<T>(url, data, config);
         return response.data as unknown as T;
     }
 
@@ -286,7 +299,10 @@ export class ApiClient {
         data?: unknown,
         config?: AxiosRequestConfig
     ): Promise<T> {
-        const response = await this.client.put<T>(url, data, config);
+        if (this.useMockData) {
+            return this.requestMock<T>("PUT", url, config, data);
+        }
+        const response = await this.client!.put<T>(url, data, config);
         return response.data as unknown as T;
     }
 
@@ -295,7 +311,10 @@ export class ApiClient {
         data?: unknown,
         config?: AxiosRequestConfig
     ): Promise<T> {
-        const response = await this.client.patch<T>(url, data, config);
+        if (this.useMockData) {
+            return this.requestMock<T>("PATCH", url, config, data);
+        }
+        const response = await this.client!.patch<T>(url, data, config);
         return response.data as unknown as T;
     }
 
@@ -303,13 +322,38 @@ export class ApiClient {
         url: string,
         config?: AxiosRequestConfig
     ): Promise<T> {
-        const response = await this.client.delete<T>(url, config);
+        if (this.useMockData) {
+            return this.requestMock<T>("DELETE", url, config);
+        }
+        const response = await this.client!.delete<T>(url, config);
         return response.data as unknown as T;
     }
 
     // Method to check if a request is in progress (for duplicate prevention)
     public isRequestInProgress(idempotencyKey: string): boolean {
         return idempotencyKeys.has(idempotencyKey);
+    }
+
+    private async requestMock<T>(
+        method: HttpMethod,
+        url: string,
+        config?: AxiosRequestConfig,
+        data?: unknown
+    ): Promise<T> {
+        const headers = {
+            ...(config?.headers ?? {}),
+        };
+        if (!headers.Authorization) {
+            const token = this.getAuthToken();
+            if (token) {
+                headers.Authorization = `Bearer ${token}`;
+            }
+        }
+        const mergedConfig: AxiosRequestConfig = {
+            ...config,
+            headers,
+        };
+        return await mockServer.request<T>(method, url, mergedConfig, data);
     }
 }
 

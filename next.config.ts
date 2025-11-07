@@ -11,13 +11,12 @@ const nextConfig: NextConfig = {
                 port: "",
                 pathname: "/**",
             },
-            // Add your backend domain here if it serves images directly
-            // {
-            //     protocol: "https",
-            //     hostname: "your-backend-domain.com",
-            //     port: "",
-            //     pathname: "/images/**",
-            // },
+            {
+                protocol: "http",
+                hostname: "localhost",
+                port: "8080",
+                pathname: "/**",
+            },
         ],
     },
 };

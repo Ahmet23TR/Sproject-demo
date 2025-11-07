@@ -61,5 +61,8 @@ export const getApiErrorMessage = (error: unknown): string => {
         const generic = extractEnvelopeMessage(axiosError.response?.data) || axiosError.message;
         if (generic) return generic;
     }
+    if (error instanceof Error) {
+        return error.message || 'An unexpected error occurred. Please try again.';
+    }
     return 'An unexpected error occurred. Please try again.';
 };
