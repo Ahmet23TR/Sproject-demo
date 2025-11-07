@@ -11,7 +11,7 @@ export default function DemoInfoButton({ onClick }: DemoInfoButtonProps) {
     return (
         <Tooltip
             title="View Demo Guide"
-            placement="right"
+            placement="left"
             TransitionComponent={Zoom}
             arrow>
             <Box
@@ -19,7 +19,7 @@ export default function DemoInfoButton({ onClick }: DemoInfoButtonProps) {
                 sx={{
                     position: "fixed",
                     bottom: 16,
-                    left: 16,
+                    right: 16,
                     zIndex: 9998,
                     width: 56,
                     height: 56,
